@@ -1,0 +1,13 @@
+image*
+*.xml
+*.pyc
+maps
+cosmo_from_icon
+data
+LPI
+LPI_
+updates
+.idea/
+__pycache__/
+lib/__pycache__/
+nohup.out
