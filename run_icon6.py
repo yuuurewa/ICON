@@ -37,7 +37,7 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
 
     for lead_time_min in model_fileset(fc_start_minutes, fc_end_minutes, data_step_minutes):
         fc_time = model_time + timedelta(minutes=lead_time_min)
-        fc_time = fc_time.strftime("%d/%m/%Y %H(UTC)")
+        fc_time = fc_time.strftime("%d.%m.%Y %H UTC")
         lead_time = f"{lead_time_min//60:03d}"
 
         with ProcessPoolExecutor(len(parameters)) as executor:
