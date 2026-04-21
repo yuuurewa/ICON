@@ -32,8 +32,8 @@ level_temp = {
     ("cold", 2.2, 300): (-70, -50),
 }
 
-fi_levels = {300: np.arange(800, 1000, 2), 500: np.arange(450, 650, 2), 700: np.arange(200, 400, 2),
-             850: np.arange(100, 200, 2), 925: np.arange(0, 100, 2), 1000: np.arange(-100, 100, 2)}
+fi_levels = {300: np.arange(800, 1000, 4), 500: np.arange(450, 650, 4), 700: np.arange(200, 400, 4),
+             850: np.arange(100, 200, 4), 925: np.arange(0, 100, 4), 1000: np.arange(-100, 100, 4)}
 
 levels_rh = np.arange(0, 101, 10)
 
