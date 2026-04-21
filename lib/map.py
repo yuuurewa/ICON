@@ -24,7 +24,7 @@ class BasePlot:
         self.ftp_user = ftp_user
 
     def create(self, text_left, text_right, description, fc_time, lead_time, resolution: float, right_pos=None):
-        self.fig, self.ax = plt.subplots(figsize=self.figsize)
+        self.fig, self.ax = plt.subplots(figsize=self.figsize, dpi=200)
         self.fig.subplots_adjust(right=0.85)  # оставляем 15% справа для colorbar
         self.ax.axis('off')
         self.transform = crs.PlateCarree()
@@ -64,11 +64,11 @@ class BasePlot:
         # self.ax.set_title(title, y=1.05)
         # Верхняя центральная часть (две строки разным шрифтом)
         if resolution == 2.2:
-            f_height = 0.9
-            s_height = 0.86
+            f_height = 0.95
+            s_height = 0.91
         else:
-            f_height = 0.89
-            s_height = 0.85
+            f_height = 0.93
+            s_height = 0.89
 
         if right_pos==None:
             right_pos=0.97
@@ -168,6 +168,8 @@ class BasePlot:
         p = {
             "cosmo_phenom": "atyjvtys",
             "cosmo_lhn": "gjh5GHF54f",
+            "icon2": "Kmq2026A!0",
+            "icon6": "QzAXb@2026",
         }
         session = ftplib.FTP('192.168.9.9', self.ftp_user, p[self.ftp_user])
         file = open(filename, 'rb')
@@ -176,14 +178,26 @@ class BasePlot:
         file.close()
         session.quit()
 
-    def save(self, name, image_type="png"):
-        name = f"{name}hour.png"
+    def save(self, name, image_type=None):
+        name = f"{name}hour"
         filename = os.path.join(self.path, name)
         self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11, zorder=60)
         if image_type == "tiff":
             self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
         else:
-            self.fig.savefig(filename, bbox_inches='tight')
+            png_file = f"{filename}.png"
+
+            self.fig.savefig(png_file, bbox_inches='tight')
+
+            from PIL import Image
+
+            img = Image.open(png_file)
+
+            img = img.convert("RGB")
+            img = img.convert("P", palette=Image.ADAPTIVE, colors=128)
+
+            img.save(png_file, optimize=True)
+
         plt.cla()
         # plt.clf()
         plt.close()
@@ -201,7 +215,7 @@ class Map2km(BasePlot):
     extent = (71, 93, 50, 58)
     cent_lat = 57
     cent_lon = 70
-    figsize = (12, 9)
+    figsize = (14, 9)
     proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
     cities = (
         {"name": "Кемерово", "lat": 55.35, "lon": 86.09},
@@ -230,35 +244,35 @@ class Map2km(BasePlot):
     )
 
 
-class Map6km(BasePlot):
-
-    extent = (60, 115, 42, 69)
-    cent_lat = 53.2
-    cent_lon = 85.5
-    figsize = (12, 8)
-    proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
-    cities = (
-        {"name": "Челябинск", "lat": 55.159, "lon": 61.402},
-        {"name": "Екатеринбург", "lat": 56.838, "lon": 60.597},
-        {"name": "Курган", "lat": 55.444, "lon": 65.316},
-        {"name": "Тюмень", "lat": 57.153, "lon": 65.534},
-        {"name": "Салехард", "lat": 66.549, "lon": 66.6083},
-        {"name": "Ханты-Мансийск", "lat": 61.002, "lon": 69.018},
-        {"name": "Норильск", "lat": 69.349, "lon": 88.201},
-        {"name": "Тура", "lat": 64.276, "lon": 100.198},
-        {"name": "Красноярск", "lat": 56.008, "lon": 92.87},
-        {"name": "Абакан", "lat": 53.720, "lon": 91.442},
-        {"name": "Кызыл", "lat": 51.719, "lon": 94.437},
-        {"name": "Иркутск", "lat": 52.286, "lon": 104.280},
-        {"name": "Чита", "lat": 52.034, "lon": 113.499},
-        {"name": "Якутск", "lat": 62.027, "lon": 129.704},
-        {"name": "Барнаул", "lat": 53.21, "lon": 83.47},
-        {"name": "Горно-Алтайск", "lat": 51.57, "lon": 85.58},
-        {"name": "Кемерово", "lat": 55.2, "lon": 86.04},
-        {"name": "Новосибирск", "lat": 55.02, "lon": 82.8},
-        {"name": "Омск", "lat": 54.58, "lon": 73.23},
-        {"name": "Томск", "lat": 56.29, "lon": 84.57}
-    )
+# class Map6km(BasePlot):
+#
+#     extent = (60, 115, 42, 69)
+#     cent_lat = 53.2
+#     cent_lon = 85.5
+#     figsize = (12, 8)
+#     proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
+#     cities = (
+#         {"name": "Челябинск", "lat": 55.159, "lon": 61.402},
+#         {"name": "Екатеринбург", "lat": 56.838, "lon": 60.597},
+#         {"name": "Курган", "lat": 55.444, "lon": 65.316},
+#         {"name": "Тюмень", "lat": 57.153, "lon": 65.534},
+#         {"name": "Салехард", "lat": 66.549, "lon": 66.6083},
+#         {"name": "Ханты-Мансийск", "lat": 61.002, "lon": 69.018},
+#         {"name": "Норильск", "lat": 69.349, "lon": 88.201},
+#         {"name": "Тура", "lat": 64.276, "lon": 100.198},
+#         {"name": "Красноярск", "lat": 56.008, "lon": 92.87},
+#         {"name": "Абакан", "lat": 53.720, "lon": 91.442},
+#         {"name": "Кызыл", "lat": 51.719, "lon": 94.437},
+#         {"name": "Иркутск", "lat": 52.286, "lon": 104.280},
+#         {"name": "Чита", "lat": 52.034, "lon": 113.499},
+#         {"name": "Якутск", "lat": 62.027, "lon": 129.704},
+#         {"name": "Барнаул", "lat": 53.21, "lon": 83.47},
+#         {"name": "Горно-Алтайск", "lat": 51.57, "lon": 85.58},
+#         {"name": "Кемерово", "lat": 55.2, "lon": 86.04},
+#         {"name": "Новосибирск", "lat": 55.02, "lon": 82.8},
+#         {"name": "Омск", "lat": 54.58, "lon": 73.23},
+#         {"name": "Томск", "lat": 56.29, "lon": 84.57}
+#     )
 
 
 class Map6kmKz(BasePlot):
@@ -268,7 +282,7 @@ class Map6kmKz(BasePlot):
     cent_lat = 80
     cent_lon = 78
     # proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
-    figsize = (12, 9)
+    figsize = (14, 9)
     cities = (
         {"name": "Челябинск", "lat": 55.159, "lon": 61.402},
         {"name": "Екатеринбург", "lat": 56.838, "lon": 60.597},
