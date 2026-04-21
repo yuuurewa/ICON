@@ -336,7 +336,7 @@ class PlotParameter:
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
-        cr = self.plot_map.draw_contourf(rh, self.lats, self.lons, levels_rh, cm=plt.cm.summer_r, extend=None)
+        cr = self.plot_map.draw_contourf(rh, self.lats, self.lons, levels_rh, cm=plt.cm.YlGnBu, extend=None)
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Отн. влажность (%)"
         self.plot_map.draw_colorbar(cr, cbar, levels_rh)
@@ -376,7 +376,7 @@ class PlotParameter:
         rh = gaussian_filter(self.model.rh_lvl(level).values, sigma=5)
         fi = gaussian_filter(self.model.fi_lvl(level).values, sigma=5)
         fi_dam = fi / 9.80665 / 10
-        crh = self.plot_map.draw_contourf(rh, self.lats, self.lons, levels_rh, cm=plt.cm.summer_r, extend=None)
+        crh = self.plot_map.draw_contourf(rh, self.lats, self.lons, levels_rh, cm=plt.cm.YlGnBu, extend=None)
         cf = self.plot_map.draw_contour(fi_dam, self.lats, self.lons, fi_levels[level], 'saddlebrown')
         for label in cf.labelTexts:
             label.set_fontsize(8.5)
@@ -507,7 +507,7 @@ class PlotParameter:
         t = gaussian_filter(self.model.t_2m_grb2.values, sigma=6)
         td = gaussian_filter(self.model.td_2m.values, sigma=6)
         d = t - td
-        levels_d = np.arange(floor(d.min()), ceil(d.max()) + 0.1, 4)
+        levels_d = np.arange(floor(d.min()), ceil(d.max()) + 0.1, 2)
         cmap = plt.get_cmap("summer", 256)
         colors = [cmap(i) for i in range(cmap.N)]
         sigma = 15 if self.resolution == 2.2 else 6
@@ -524,12 +524,22 @@ class PlotParameter:
         description = f"Фаза и интенсивность осадков ({int(self.data_step_min / 60)} ч)"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution, right_pos=1.085)
-        rain_con = self.model.rain_con
         rain_gsp = self.model.rain_gsp
-        snow_con = self.model.snow_con
-        snow_gsp = self.model.snow_gsp
-        rain = rain_con.values + rain_gsp.values
-        snow = snow_con.values + snow_gsp.values
+        curr_rain = self.model.rain_con.values + self.model.rain_gsp.values
+        curr_snow = self.model.snow_con.values + self.model.snow_gsp.values
+
+        if getattr(self, "_prev_lead_time", None) is None:
+            rain = curr_rain
+            snow = curr_snow
+        else:
+            rain = curr_rain - self._prev_rain
+            snow = curr_snow - self._prev_snow
+
+        self._prev_rain = curr_rain
+        self._prev_snow = curr_snow
+        self._prev_lead_time = lead_time
+        rain = np.maximum(rain, 0)
+        snow = np.maximum(snow, 0)
         total = rain + snow
         p_rain = rain / (total + 1e-6)
         p_snow = snow / (total + 1e-6)
@@ -545,12 +555,14 @@ class PlotParameter:
         mixed[mixed_mask] = total[mixed_mask]
         rain_only[rain_mask] = total[rain_mask]
         snow_only[snow_mask] = total[snow_mask]
+
         if self.resolution == 2.2:
             sigma = 15
             lons, lats = rain_gsp.lons.values, rain_gsp.lats.values
         else:
             sigma = 6
             lons, lats = np.meshgrid(rain_gsp.lons.values, rain_gsp.lats.values)
+            
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         pm = self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy', zorder=20)
