@@ -22,7 +22,7 @@ DATA_DIR, IMAGE_DIR = set_paths(NAME, resolution, date)
 resolution = float(resolution) / 10
 
 parameters = [("stp", None), ("precipitation", None), ("wind_gust", None), ("dbz", None), ("lpi", None), ("t2m", None),
-              ("rh2m", None), ("dp2m", None), ("vis", None), ("phase", None),]
+              ("rh2m", None), ("dp2m", None), ("vis", None),]
 
 levels = [300, 500, 700, 850, 925, 1000]
 parameters_agg = ("gust_max", "lpi_max24", "sdi2_max24", "precip_sum", "hail_max")
@@ -66,6 +66,9 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
             for future in as_completed(futures):
                 future.result()
 
+        plot.def_map(Map2km(IMAGE_DIR, date, "icon6"))
+        plot.phase(fc_time, lead_time)
+        
     with ProcessPoolExecutor(len(parameters_agg) + 2) as executor:
         futures = []
         for parameter in parameters_agg:
