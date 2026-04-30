@@ -66,7 +66,7 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
             for future in as_completed(futures):
                 future.result()
 
-        plot.def_map(Map2km(IMAGE_DIR, date, "icon6"))
+        plot.def_map(Map2km(IMAGE_DIR, date, "icon2"))
         plot.phase(fc_time, lead_time)
         
     with ProcessPoolExecutor(len(parameters_agg) + 2) as executor:
