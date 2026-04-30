@@ -23,7 +23,7 @@ resolution = float(resolution) / 10
 
 
 parameters = [("precipitation", None), ("wind_gust", None), ("dbz", None), ("t2m", None), ("rh2m", None), ("dp2m", None),
-("vis", None), ("phase", None),]
+("vis", None),]
 levels = [300, 500, 700, 850, 925, 1000]
 parameters_agg = ("gust_max", "precip_sum")
 
@@ -65,6 +65,9 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
             for future in as_completed(futures):
                 future.result()
 
+        plot.def_map(Map6kmKz(IMAGE_DIR, date, "icon6"))
+        plot.phase(fc_time, lead_time)
+        
     with ProcessPoolExecutor(len(parameters_agg) * 2) as executor:
         futures = []
         for parameter in parameters_agg:
