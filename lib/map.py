@@ -9,6 +9,7 @@ from cartopy.io.shapereader import Reader
 from matplotlib.cm import get_cmap
 import matplotlib
 matplotlib.use('agg')
+from PIL import Image
 
 from constants import *
 
@@ -179,24 +180,20 @@ class BasePlot:
         session.quit()
 
     def save(self, name, image_type=None):
-        name = f"{name}hour"
+        name = f"{name}hour.png"
         filename = os.path.join(self.path, name)
         self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11, zorder=60)
         if image_type == "tiff":
             self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
         else:
-            png_file = f"{filename}.png"
+            self.fig.savefig(filename, bbox_inches='tight')
 
-            self.fig.savefig(png_file, bbox_inches='tight')
-
-            from PIL import Image
-
-            img = Image.open(png_file)
+            img = Image.open(filename)
 
             img = img.convert("RGB")
             img = img.convert("P", palette=Image.ADAPTIVE, colors=128)
 
-            img.save(png_file, optimize=True)
+            img.save(filename, optimize=True)
 
         plt.cla()
         # plt.clf()
