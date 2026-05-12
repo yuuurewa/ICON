@@ -180,20 +180,23 @@ class BasePlot:
         session.quit()
 
     def save(self, name, image_type=None):
-        name = f"{name}hour.png"
+        name = f"{name}hour.jpg"
         filename = os.path.join(self.path, name)
         self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11, zorder=60)
-        if image_type == "tiff":
-            self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
-        else:
-            self.fig.savefig(filename, bbox_inches='tight')
-
-            img = Image.open(filename)
-
-            img = img.convert("RGB")
-            img = img.convert("P", palette=Image.ADAPTIVE, colors=128)
-
-            img.save(filename, optimize=True)
+        # if image_type == "tiff":
+        #     self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
+        # else:
+        self.fig.savefig(
+            filename,
+            format="jpg",
+            dpi=110,
+            bbox_inches='tight',
+            pil_kwargs={
+                "quality": 85,
+                "optimize": True,
+                "progressive": True
+            }
+        )
 
         plt.cla()
         # plt.clf()
