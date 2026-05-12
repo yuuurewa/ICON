@@ -205,8 +205,9 @@ class BasePlot:
         if os.environ.get('HOSTNAME') == "xfront2":
             try:
                 self._ftp_send(filename, name)
-            except Exception:
+            except Exception as e:
                 print("FTP transfer failed")
+                print(e)
                 pass
 
 
