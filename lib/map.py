@@ -37,7 +37,7 @@ class BasePlot:
 
         states = cf.ShapelyFeature(Reader('./RUS_adm/RUS_adm1.shp').geometries(),
                                    self.transform, edgecolor='black', facecolor='none')
-        self.ax.add_feature(states, linewidth=.5)
+        self.ax.add_feature(states, linewidth=.1)
 
         for feature in [cf.RIVERS, cf.LAKES]:
             self.add_cfeature(feature)
@@ -144,7 +144,7 @@ class BasePlot:
         scale = 20
         self.ax.barbs(lons[::scale, ::scale], lats[::scale, ::scale], u[::scale, ::scale], v[::scale, ::scale],
                   transform=self.transform, rounding=False, barb_increments=dict(half=2, full=5, flag=24),
-                  length=4, sizes=dict(emptybarb=0.05, spacing=0.2, height=0.7), alpha=0.3, linewidth=0.7)
+                  length=4, sizes=dict(emptybarb=0.05, spacing=0.2, height=0.7), alpha=0.48, linewidth=0.7)
 
     def draw_scatter(self, size, lats, lons):
         size = np.where(size > 0.001, size.values, np.nan)
@@ -180,7 +180,7 @@ class BasePlot:
         session.quit()
 
     def save(self, name, image_type=None):
-        name = f"{name}hour.png"
+        name = f"{name}hour.jpg"
         filename = os.path.join(self.path, name)
         self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11, zorder=60)
         # if image_type == "tiff":
@@ -188,13 +188,13 @@ class BasePlot:
         # else:
         self.fig.savefig(
             filename,
-            format="png",
-            dpi=100,
+            format="jpg",
+            dpi=110,
             bbox_inches='tight',
-            pad_inches=0.05,
             pil_kwargs={
+                "quality": 85,
                 "optimize": True,
-                "compress_level": 9
+                "progressive": True
             }
         )
 
