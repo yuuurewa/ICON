@@ -140,11 +140,10 @@ class BasePlot:
             label.set_bbox(dict(facecolor='white', edgecolor='none', pad=1))
         return c
 
-    def draw_barbs(self, u, v, lats, lons):
-        scale = 20
+    def draw_barbs(self, u, v, lats, lons, scale):
         self.ax.barbs(lons[::scale, ::scale], lats[::scale, ::scale], u[::scale, ::scale], v[::scale, ::scale],
                   transform=self.transform, rounding=False, barb_increments=dict(half=2, full=5, flag=24),
-                  length=4, sizes=dict(emptybarb=0.05, spacing=0.2, height=0.7), alpha=0.3, linewidth=0.7)
+                  length=4, sizes=dict(emptybarb=0.05, spacing=0.2, height=0.7), alpha=0.35, linewidth=0.7, color='k')
 
     def draw_scatter(self, size, lats, lons):
         size = np.where(size > 0.001, size.values, np.nan)
