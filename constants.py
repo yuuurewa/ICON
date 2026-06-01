@@ -47,7 +47,7 @@ gust_cmap = (
             '#772584', '#4376B5', '#BBB6B1', 'black'
         )
 cl_desc = {'clcl': 'нижнего', 'clcm': 'среднего', 'clch': 'верхнего', 'clct': 'Общая облачность (%)'}
-cl_lvl = [0, 10, 30, 50, 70, 90, 100]
+cl_lvl = np.arange(0, 11, 1)
 type_cloud = ['hbas_con', 'htop_con', 'ceiling']
 levels_cl_cov = np.concatenate([np.arange(0, 1500, 150), np.arange(1500, 12001, 1500)])
 cl_cov_colors = [
@@ -124,7 +124,7 @@ sdi_bounds = (-0.009, -0.003, -0.001, -0.0003, 0.0003, 0.001, 0.003, 0.009)
 
 # cbar_h_left = {"cax": [0.1, 0.06, 0.35, 0.03], "orientation": "horizontal", "label": ""}
 # cbar_h_right = {"cax": [0.5, 0.06, 0.35, 0.03], "orientation": "horizontal", "label": ""}
-cbar_h_left = {"cax": [0.88, 0.14, 0.02, 0.35], "orientation": "vertical", "label": ""}
+cbar_h_left = {"cax": [0.88, 0.12, 0.02, 0.35], "orientation": "vertical", "label": ""}
 cbar_h_right = {"cax": [0.88, 0.5, 0.02, 0.35], "orientation": "vertical", "label": ""}
 cbar_full = {
     # 6.6: {"cax": [0.1, 0.06, 0.8, 0.03], "orientation": "horizontal", "label": ""},
