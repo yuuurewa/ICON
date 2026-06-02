@@ -4,6 +4,7 @@ from typing import List
 import numpy
 import xarray as xr
 import cartopy.crs as ccrs
+from PIL.ImageOps import scale
 
 from constants import *
 from helpers import initial_time
@@ -62,6 +63,25 @@ class PlotParameter:
         end = np.ceil(dmax / step) * step
         return np.arange(start, end + step, step)
 
+    def cloud_to_score(self, cloud):
+        score = np.full_like(cloud, 10, dtype=int)
+
+        score[np.isnan(cloud)] = 10
+
+        score[(cloud >= 0) & (cloud < 5)] = 0
+        score[(cloud >= 5) & (cloud < 15)] = 1
+        score[(cloud >= 15) & (cloud < 25)] = 2
+        score[(cloud >= 25) & (cloud < 35)] = 3
+        score[(cloud >= 35) & (cloud < 45)] = 4
+        score[(cloud >= 45) & (cloud < 55)] = 5
+        score[(cloud >= 55) & (cloud < 65)] = 6
+        score[(cloud >= 65) & (cloud < 75)] = 7
+        score[(cloud >= 75) & (cloud < 85)] = 8
+        score[(cloud >= 85) & (cloud < 95)] = 9
+        score[(cloud >= 95) & (cloud <= 100)] = 10
+
+        return score
+
     def lpi_max24(self, hours_step=24) -> None:
         description = f"Макс. молниевый потенциал ({hours_step} ч)"
 
@@ -72,7 +92,7 @@ class PlotParameter:
                        bounds=lpi_bounds, description=description, cmap_list=lpi_cmap, hours_step=hours_step)
 
     def sdi2_max24(self, hours_step=24) -> None:
-        description = f"Индекс суперячейки (SDI) ({hours_step} ч)"
+        description = f"Индекс суперъячейки (SDI) ({hours_step} ч)"
 
         # title = f"{}{self.title}"
         cbar = cbar_full[self.resolution]
@@ -98,12 +118,12 @@ class PlotParameter:
             step = 180
         else:
             step = 60
-        cbar["label"] = f"макс. порывы ветра за {hours_step} ч., м/с"
+        cbar["label"] = f"Макс. порывы ветра за {hours_step} ч., м/с"
         self._plot_max(name="vmax_10m", data_step_minutes=step, cbar=cbar,
                        bounds=gust_bounds, description=description, cmap_list=gust_cmap, hours_step=hours_step)
 
     def stp_max24(self, hours_step=24) -> None:
-        description = "макс. STP"
+        description = "Макс. STP"
 
         # title = f"{description}{self.title}"
         cbar = cbar_full[self.resolution]
@@ -111,7 +131,7 @@ class PlotParameter:
             step = 180
         else:
             step = 60
-        cbar["label"] = "макс. STP за 24 часа, 1"
+        cbar["label"] = "Макс. STP за 24 часа, 1"
         self._plot_max(name="stp", data_step_minutes=step, cbar=cbar,
                        bounds=stp_levels, description=description, cmap_list=gust_cmap[1:], extend='max', hours_step=hours_step)
 
@@ -228,17 +248,20 @@ class PlotParameter:
 
     def precipitation(self, fc_time, lead_time) -> None:
         scale = self.data_step_min / 60
-        description = f"Осадки ({int(scale)}ч), облачность среднего яруса (%), давление на уровне моря"
+        description = f"Осадки ({int(scale)}ч), облачность среднего яруса, давление на уровне моря"
 
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         precip_bounds = [v * scale for v in prec_bounds]
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         sigma = 15 if self.resolution == 2.2 else 6
+        cl = gaussian_filter(self.model.clcm.values, sigma=6)
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
+        cl_score = self.cloud_to_score(cl)
         pmsl = pmsl_sm / 100
+        # cv = self.plot_map.draw_contourf(cl_score, self.lats, self.lons, cl_lvl, cmap_list=plt.cm.gist_yarg, extend=None)
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
-        clcm = self.plot_map.draw_contourf(self.model.clcm.values, self.lats, self.lons, cloud_levels, cm="Blues",
-                                           opacity=0.5)
+        clcm = self.plot_map.draw_contourf(cl_score, self.lats, self.lons, cl_lvl, cmap_list=plt.cm.gist_yarg,
+                                           opacity=0.5, extend=None)
         lead_time_min = int(lead_time) * 60
         previous_lead_time = lead_time_min - self.data_step_min
         next_lead_time = lead_time_min + self.data_step_min
@@ -259,12 +282,12 @@ class PlotParameter:
             cbar["label"] = f"Осадки за {int(scale)}ч., мм"
             self.plot_map.draw_colorbar(prec, cbar, precip_bounds)
             cbar = cbar_h_left
-            cbar["label"] = "Облачность ср. яруса, %"
-            self.plot_map.draw_colorbar(clcm, cbar, cloud_levels)
+            cbar["label"] = "Облачность ср. яруса, балл"
+            self.plot_map.draw_colorbar(clcm, cbar, cl_lvl)
         else:
             cbar = cbar_h_left
-            cbar["label"] = "Облачность ср. яруса, %"
-            self.plot_map.draw_colorbar(clcm, cbar, cloud_levels)
+            cbar["label"] = "Облачность ср. яруса, балл"
+            self.plot_map.draw_colorbar(clcm, cbar, cl_lvl)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_tot_prec_{lead_time}")
 
     def dbz(self, fc_time, lead_time) -> None:
@@ -293,7 +316,12 @@ class PlotParameter:
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
         vmax = self.plot_map.draw_contourf(self.model.vmax_10m.values, self.lats, self.lons, gust_bounds,
                                        cmap_list=gust_cmap)
-        self.plot_map.draw_barbs(self.model.u_10m.values, self.model.v_10m.values, self.lats, self.lons)
+        if self.resolution == 2.2:
+            self.plot_map.draw_barbs(self.model.u_10m.values, self.model.v_10m.values,
+                                 self.lats, self.lons, scale=20)
+        else:
+            self.plot_map.draw_barbs(self.model.u_10m.values, self.model.v_10m.values,
+                                 self.lats, self.lons, scale=25)
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Порыв ветра, м/с"
         self.plot_map.draw_colorbar(vmax, cbar, gust_bounds)
@@ -338,7 +366,7 @@ class PlotParameter:
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
         cr = self.plot_map.draw_contourf(rh, self.lats, self.lons, levels_rh, cm=plt.cm.YlGnBu, extend=None)
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "Отн. влажность (%)"
+        cbar["label"] = "Отн. влажность, %"
         self.plot_map.draw_colorbar(cr, cbar, levels_rh)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_rh2m_{lead_time}")
 
@@ -382,7 +410,7 @@ class PlotParameter:
             label.set_fontsize(8.5)
             label.set_bbox(dict(facecolor='white', edgecolor='none', pad=1))
         cbar = cbar_full[self.resolution]
-        cbar["label"] = f"Отн. влажность на уровне {level} гПа (%)"
+        cbar["label"] = f"Отн. влажность на уровне {level} гПа, %"
         self.plot_map.draw_colorbar(crh, cbar, levels_rh)
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.05), fontsize=9, frameon=True)
@@ -410,13 +438,13 @@ class PlotParameter:
                 barb = self.plot_map.draw_contourf(wind_speed, lats_2d, lons_2d, wind_h300_levels,
                                                cmap_list=wind_h300_cmap, extend='max')
             cbar = cbar_full[self.resolution]
-            cbar["label"] = f"Скорость ветра (м/с)"
+            cbar["label"] = f"Скорость ветра, м/с"
             self.plot_map.draw_colorbar(barb, cbar, wind_h300_levels)
         cf = self.plot_map.draw_contour(fi_dam, self.lats, self.lons, fi_levels[level], 'saddlebrown')
         if self.resolution == 2.2:
-            self.plot_map.draw_barbs(u.values, v.values, self.lats, self.lons)
+            self.plot_map.draw_barbs(u.values, v.values, self.lats, self.lons, scale=20)
         else:
-            self.plot_map.draw_barbs(u.values[::3], v.values[::3], self.lats[::3], self.lons[::3])
+            self.plot_map.draw_barbs(u.values, v.values, self.lats, self.lons, scale=25)
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.05), fontsize=9, frameon=True)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_wind{level}_{lead_time}")
@@ -432,7 +460,7 @@ class PlotParameter:
         cw = self.plot_map.draw_contourf(w, self.lats, self.lons, w_levels, cm="seismic", extend=None)
         cf = self.plot_map.draw_contour(fi_dam, self.lats, self.lons, fi_levels[level], 'saddlebrown')
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "Вертикальная скорость (м/с)"
+        cbar["label"] = "Вертикальная скорость, м/с"
         self.plot_map.draw_colorbar(cw, cbar, w_levels)
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.06), fontsize=9, frameon=True)
@@ -450,13 +478,13 @@ class PlotParameter:
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
         cv = self.plot_map.draw_contourf(vis, self.lats, self.lons, levels_vis, cmap_list=vis_colors, extend=None)
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "Видимость (м)"
+        cbar["label"] = "Видимость, м"
         self.plot_map.draw_colorbar(cv, cbar, levels_vis)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_vis_{lead_time}")
 
     def cloud(self, fc_time, lead_time, level: str) -> None:
         if level=='clcl' or level=='clcm' or level=='clch':
-            description = f"Облачность {cl_desc[level]} яруса (%)"
+            description = f"Облачность {cl_desc[level]} яруса"
         elif level=='clct':
             description = cl_desc[level]
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
@@ -465,11 +493,12 @@ class PlotParameter:
         cl = gaussian_filter(cl_da.values, sigma=6)
         sigma = 15 if self.resolution == 2.2 else 6
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
+        cl_score = self.cloud_to_score(cl)
         pmsl = pmsl_sm / 100
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
-        cv = self.plot_map.draw_contourf(cl, self.lats, self.lons, cl_lvl, cmap_list=plt.cm.gist_yarg, extend=None)
+        cv = self.plot_map.draw_contourf(cl_score, self.lats, self.lons, cl_lvl, cmap_list=plt.cm.gist_yarg, extend=None)
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "Облачность (%)"
+        cbar["label"] = "Облачность, балл"
         self.plot_map.draw_colorbar(cv, cbar, cl_lvl)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_{level}_{lead_time}")
 
@@ -479,13 +508,13 @@ class PlotParameter:
         elif type=='htop_con':
             description = f"Верхняя граница конвективной облачности"
         elif type=='ceiling':
-            description = f"Высота нижней границы общей облачности"
+            description = f"Высота нижней границы общей облачности (≥ 5 баллов)"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         type_cl = getattr(self.model, type)
         cloud_cover = type_cl.values - self.model.hsurf.values
         cloud_cover[cloud_cover > 12001.0] = np.nan
-        sigma = 15 if self.resolution == 2.2 else 6
+        sigma = 20 if self.resolution == 2.2 else 6
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
@@ -496,7 +525,7 @@ class PlotParameter:
             cc = self.plot_map.draw_contourf(cloud_cover, self.lats, self.lons, levels_cl_cov, cmap_list=cl_cov_colors,
                                              extend=None)
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "Высота (м)"
+        cbar["label"] = "Высота, м"
         self.plot_map.draw_colorbar(cc, cbar, levels_cl_cov)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_{type}_{lead_time}")
 
@@ -562,7 +591,7 @@ class PlotParameter:
         else:
             sigma = 6
             lons, lats = np.meshgrid(rain_gsp.lons.values, rain_gsp.lats.values)
-            
+
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         pm = self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy', zorder=20)
