@@ -50,10 +50,15 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
 
             for level in levels:
                 plot.def_map(Map2km(IMAGE_DIR, date, "icon2"))
-                futures.append(executor.submit(plot.t_level, fc_time, lead_time, level))
+
+                if level != 1000:
+                    futures.append(executor.submit(plot.t_level, fc_time, lead_time, level))
+
                 futures.append(executor.submit(plot.rh_level, fc_time, lead_time, level))
                 futures.append(executor.submit(plot.wind_level, fc_time, lead_time, level))
-                futures.append(executor.submit(plot.wz_level, fc_time, lead_time, level))
+
+                if level in (500, 700):
+                    futures.append(executor.submit(plot.wz_level, fc_time, lead_time, level))
 
             for key in cl_desc:
                 plot.def_map(Map2km(IMAGE_DIR, date, "icon2"))
@@ -68,7 +73,7 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
 
         plot.def_map(Map2km(IMAGE_DIR, date, "icon2"))
         plot.phase(fc_time, lead_time)
-        
+
     with ProcessPoolExecutor(len(parameters_agg) + 2) as executor:
         futures = []
         for parameter in parameters_agg:
