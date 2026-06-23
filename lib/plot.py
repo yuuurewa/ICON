@@ -514,6 +514,7 @@ class PlotParameter:
         type_cl = getattr(self.model, type)
         cloud_cover = type_cl.values - self.model.hsurf.values
         cloud_cover[cloud_cover > 12001.0] = np.nan
+        cloud_cover[cloud_cover < 0] = np.nan
         sigma = 20 if self.resolution == 2.2 else 6
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
