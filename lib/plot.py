@@ -13,6 +13,7 @@ from lib.map import BasePlot
 from scipy.ndimage import gaussian_filter
 from math import floor, ceil
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 class PlotParameter:
     def __init__(
@@ -454,14 +455,23 @@ class PlotParameter:
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         w = gaussian_filter(self.model.w_lvl(level).values, sigma=5)
+        w[(w > -0.05) & (w < 0.05)] = 0.0
         fi = gaussian_filter(self.model.fi_lvl(level).values, sigma=5)
         fi_dam = fi / 9.80665 / 10
-        w_levels = self.auto_levels(w)
-        cw = self.plot_map.draw_contourf(w, self.lats, self.lons, w_levels, cm="seismic", extend=None)
+        cmap = mcolors.ListedColormap(wz_colors[self.resolution])
+        norm = mcolors.BoundaryNorm(wz_levels[self.resolution], cmap.N)
+        cw = plt.pcolormesh(self.lons, self.lats, w, cmap=cmap, norm=norm, shading="auto", transform=ccrs.PlateCarree())
+        zero = np.isclose(w, 0.0)
+        plt.pcolormesh(
+            self.lons, self.lats,
+            np.where(zero, 1, np.nan),
+            cmap=mcolors.ListedColormap(["#FFFFFF"]),
+            shading="auto", transform=ccrs.PlateCarree()
+        )
         cf = self.plot_map.draw_contour(fi_dam, self.lats, self.lons, fi_levels[level], 'saddlebrown')
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Вертикальная скорость, м/с"
-        self.plot_map.draw_colorbar(cw, cbar, w_levels)
+        self.plot_map.draw_colorbar(cw, cbar, wz_levels[self.resolution])
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.06), fontsize=9, frameon=True)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_wz{level}_{lead_time}")
