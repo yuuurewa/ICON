@@ -31,6 +31,22 @@ level_temp = {
 fi_levels = {300: np.arange(800, 1000, 4), 500: np.arange(450, 650, 4), 700: np.arange(200, 400, 4),
              850: np.arange(100, 200, 4), 925: np.arange(0, 100, 4), 1000: np.arange(-100, 100, 4)}
 
+wz_levels = {2.2: np.arange(-2, 3.2, 0.2), 6.6: np.arange(-1, 1.2, 0.2)}
+
+wz_colors = {
+    2.2: [
+        "#001866", "#002899", "#003ACC", "#004DFF", "#0060FF",
+        "#1A7BFF", "#4D9CFF", "#80BAFF", "#B3D6FF", "#E0F0FF",
+        "#FFF5F8", "#FFE9F0", "#FFDCE8", "#FFCFDF", "#FFC2D6",
+        "#FFB3CC", "#FFA0C1", "#FF8AB5", "#FF73A8", "#FF5C99",
+        "#FF4589", "#FF2E79", "#F51E6A", "#E0005A", "#C8004A",
+    ],
+
+    6.6: [
+        "#004DFF", "#1A7BFF", "#80BAFF", "#B3D6FF", "#E0F0FF",
+        "#FFE8F3", "#FFD1E6", "#FFB3D9", "#FF4DA6", "#CC0066",
+    ],
+}
 levels_rh = np.arange(0, 101, 10)
 
 cloud_levels = np.arange(10, 100., 10.)
@@ -44,7 +60,8 @@ gust_cmap = (
         )
 cl_desc = {'clcl': 'нижнего', 'clcm': 'среднего', 'clch': 'верхнего', 'clct': 'Общая облачность'}
 cl_lvl = np.arange(0, 11, 1)
-type_cloud = ['hbas_con', 'htop_con', 'ceiling']
+type_cloud = ['hbas_con', 'htop_con', 'ceiling', 'cdct']
+levels_hbas_con = np.concatenate([np.arange(0, 1500, 150), np.arange(1500, 3001, 1500)])
 levels_cl_cov = np.concatenate([np.arange(0, 1500, 150), np.arange(1500, 12001, 1500)])
 cl_cov_colors = [
     "#980a0a",  # 150
@@ -63,7 +80,8 @@ cl_cov_colors = [
     "#cabe88",  # 7500
     "#b5b1a6",  # 9000
     "#a3a3a3",  # 10500
-    "#c7c7c7"   # 12000
+    "#c7c7c7",   # 12000
+    "#e0e0e0"
 ]
 
 phase_levels = [0.001, 0.1, 1, 2, 5, 10, 15, 25]
