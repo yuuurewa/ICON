@@ -398,6 +398,7 @@ class PlotParameter:
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.05), fontsize=9,
                                 frameon=True)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_t{level}_{lead_time}")
+
     def rh_level(self, fc_time, lead_time, level: int) -> None:
         description = f"Относительная влажность на уровне {level} гПа"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
@@ -519,6 +520,8 @@ class PlotParameter:
             description = f"Верхняя граница конвективной облачности"
         elif type=='ceiling':
             description = f"Высота нижней границы общей облачности (≥ 5 баллов)"
+        elif type=='cdct':
+            description = f"Высота верхней границы общей облачности (≥ 5 баллов)"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         type_cl = getattr(self.model, type)
@@ -529,15 +532,21 @@ class PlotParameter:
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
-        if type=='htop_con':
+        if type=='htop_con' or type=='cdct':
             cc = self.plot_map.draw_contourf(cloud_cover, self.lats, self.lons, levels_cl_cov,
-                                             cmap_list=cl_cov_colors[::-1], extend=None)
+                                             cmap_list=cl_cov_colors[::-1], extend='max')
+        elif type=='hbas_con':
+            cc = self.plot_map.draw_contourf(cloud_cover, self.lats, self.lons, levels_hbas_con,
+                                             cmap_list=cl_cov_colors, extend='max')
         else:
             cc = self.plot_map.draw_contourf(cloud_cover, self.lats, self.lons, levels_cl_cov, cmap_list=cl_cov_colors,
-                                             extend=None)
+                                             extend='max')
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Высота, м"
-        self.plot_map.draw_colorbar(cc, cbar, levels_cl_cov)
+        if type == 'hbas_con':
+            self.plot_map.draw_colorbar(cc, cbar, levels_hbas_con)
+        else:
+            self.plot_map.draw_colorbar(cc, cbar, levels_cl_cov)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_{type}_{lead_time}")
 
     def dp2m(self, fc_time, lead_time) -> None:
