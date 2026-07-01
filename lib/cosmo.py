@@ -157,26 +157,6 @@ class ModelParam(BaseData):
         da = self._get_ds(self._suffix, filter_keys)
         return da[self._param_name]
 
-    def read_from_current_file(self) -> xarray.DataArray:
-        """
-        Читает параметр из УЖЕ выбранного filename.
-        НИЧЕГО не переключает.
-        """
-        filter_keys = {}
-        if self._param:
-            filter_keys = {'param': self._param}
-        if self._level_type:
-            filter_keys['typeOfLevel'] = self._level_type
-        if self._level:
-            filter_keys['level'] = self._level
-        if self._step_type:
-            filter_keys['stepType'] = self._step_type
-        if self._short_name:
-            filter_keys['shortName'] = self._short_name
-
-        ds = self._get_ds(self._suffix, filter_keys)
-        return ds[self._param_name]
-
     @property
     def values(self) -> numpy.ndarray:
         return self._get_array().values
@@ -413,88 +393,9 @@ class ModelData(BaseData):
     def ceiling(self) -> ModelParam:
         return ModelParam("s", level=0, param_name="CEILING", short_name="CEILING")
 
-    def all_required_params(self) -> list:
-        """
-        Возвращает список всех ModelParam, которые нужно загрузить.
-        Включает параметры на разных уровнях и поверхностные параметры.
-        """
-        levels = [500, 700, 850]  # уровни для t_lvl, u_lvl, v_lvl
-        params = []
-
-        for lvl in levels:
-            params.append(self.t_lvl(lvl))
-            params.append(self.u_lvl(lvl))
-            params.append(self.v_lvl(lvl))
-
-        params.extend([self.t_2m_grb2, self.td_2m, self.u_10m, self.v_10m,
-        # #     self.tot_prec,
-            self.pmsl,
-        ])
-
-        return params
-
-    def nearest(self, lat: float, lon: float, lats: np.ndarray,lons: np.ndarray) -> Tuple[int, int]:
-        dist_sq = (lats - lat) ** 2 + (lons - lon) ** 2
-        idx = dist_sq.argmin()
-        y, x = np.unravel_index(idx, lats.shape)
-        return y, x
-
-    def load_all_modeldata_files(self, lat: float, lon: float, hours: int = 48):
-        """
-        Загружает значения параметров в одной точке (lat, lon)
-        на диапазон часов прогноза.
-        """
-        data_cache = {}
-
-        y_idx = x_idx = None
-        coords_initialized = False
-
-        for h in range(0, hours + 1):
-            file_h = f"{fileprefix}{h // 24:02d}{h % 24:02d}0000"
-
-            try:
-                select_grib_file(file_h)
-            except Exception as e:
-                print(f"Файл {file_h} не найден:", e)
-                continue
-
-            for param in self.all_required_params():
-                try:
-                    da = param.read_from_current_file()
-                    if da is None:
-                        continue
-
-                    # 🔹 координаты определяем ОДИН РАЗ
-                    if not coords_initialized:
-                        y_idx, x_idx = self.nearest(lat, lon, da.latitude.values, da.longitude.values)
-                        coords_initialized = True
-
-                    # 🔹 сразу берём одно значение
-                    value = da.isel(y=y_idx, x=x_idx).values.item()
-
-                    param_name = getattr(param, "_param_name", None)
-                    level = getattr(param, "_level", None)
-
-                    # 🔹 формируем ключ
-                    if param_name in {"T", "U", "V"} and level is not None:
-                        key = f"{param_name}{level}"
-                    else:
-                        key = param_name
-
-                    if key not in data_cache:
-                        data_cache[key] = []
-
-                    data_cache[key].append(value)
-
-                except Exception as e:
-                    print("Ошибка при чтении", param, e)
-
-        # превращаем списки в numpy-массивы
-        for key in data_cache:
-            data_cache[key] = np.array(data_cache[key])
-
-        return data_cache
-
+    @property
+    def cdct(self) -> ModelParam:
+        return ModelParam("s", level=0, param_name="CDCT", short_name="CDCT")
 
 class ComputedModelData(ModelData):
     def __init__(self, name):
