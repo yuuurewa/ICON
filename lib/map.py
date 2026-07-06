@@ -123,7 +123,7 @@ class BasePlot:
         colorbar.set_label(cbar["label"])
         colorbar.ax.tick_params(labelsize=9)
 
-    def draw_contour(self, geom, lats, lons, levels, color, linewidth=1, linestyles='solid', **kwargs):
+    def draw_contour(self, geom, lats, lons, levels, color, linewidth=1, linestyles='solid', clabel=True, **kwargs):
         c = self.ax.contour(
             lons, lats, geom, 0,
             colors=color,
@@ -135,9 +135,10 @@ class BasePlot:
             transform=self.transform,
             transform_first=True
         )
-        labels = self.ax.clabel(c, c.levels, fmt="%d", inline=True, fontsize=8.5)
-        for label in labels:
-            label.set_bbox(dict(facecolor='white', edgecolor='none', pad=1))
+        if clabel:
+            labels = self.ax.clabel(c, c.levels, fmt="%d", inline=True, fontsize=8.5)
+            for label in labels:
+                label.set_bbox(dict(facecolor='white', edgecolor='none', pad=1))
         return c
 
     def draw_barbs(self, u, v, lats, lons, scale):
