@@ -341,7 +341,7 @@ class PlotParameter:
         self.plot_map.save(f"{self.model.name}_{self.resolution}_lpi_max_{lead_time}")
 
     def t2m(self, fc_time, lead_time) -> None:
-        description = "Температура воздуха"
+        description = "Температура воздуха (2 м)"
 
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
@@ -349,11 +349,13 @@ class PlotParameter:
             t, lons, lats = self.model.t_2m_grb2.smoothed_values(10)
         else:
             t, lons, lats = self.model.t_2m.smoothed_values(10)
-        self.plot_map.draw_contour(t - 273.15, lats, lons, t_levels[::2], 'black', linewidth=0.2)
-        t2m = self.plot_map.draw_contourf(t - 273.15, lats, lons, t_levels, cm="nipy_spectral")
+        month = datetime.strptime(fc_time, "%d.%m.%Y %H %Z").month
+        season = "warm" if 4 <= month <= 9 else "cold"
+        self.plot_map.draw_contour(t - 273.15, lats, lons, t_levels[(season, self.resolution)], 'black', linewidth=0.2)
+        t2m = self.plot_map.draw_contourf(t - 273.15, lats, lons, t_levels[(season, self.resolution)], cm="nipy_spectral")
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "T,°C"
-        self.plot_map.draw_colorbar(t2m, cbar, t_levels)
+        cbar["label"] = "Температура воздуха 2м,°C"
+        self.plot_map.draw_colorbar(t2m, cbar, t_levels[(season, self.resolution)])
         self.plot_map.save(f"{self.model.name}_{self.resolution}_t2m_{lead_time}")
 
     def rh2m(self, fc_time, lead_time) -> None:
@@ -373,16 +375,14 @@ class PlotParameter:
 
     def t_level(self, fc_time, lead_time, level: int) -> None:
         description = f"Температура на уровне {level} гПа"
-        fc_time_dt = datetime.strptime(fc_time, "%d.%m.%Y %H %Z")
-        month = fc_time_dt.month
+        month = datetime.strptime(fc_time, "%d.%m.%Y %H %Z").month
         season = "warm" if 4 <= month <= 9 else "cold"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         t = gaussian_filter(self.model.t_lvl(level).values, sigma=5)
         fi = gaussian_filter(self.model.fi_lvl(level).values, sigma=5)
         t_cels = t - 273.15
         fi_dam = fi / 9.80665 / 10
-        res = self.resolution  # 6.6 или 2.2
-        t_min, t_max = level_temp.get((season, res, level), (floor(np.nanmin(t_cels)), ceil(np.nanmax(t_cels))))
+        t_min, t_max = level_temp.get((season, self.resolution, level), (floor(np.nanmin(t_cels)), ceil(np.nanmax(t_cels))))
         levels_t = np.arange(t_min, t_max + 0.1, 2)
         cmap = plt.get_cmap("nipy_spectral", 34)
         colors = [cmap(i) for i in range(cmap.N)]
