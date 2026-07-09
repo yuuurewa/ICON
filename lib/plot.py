@@ -221,13 +221,13 @@ class PlotParameter:
 
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
-        stp = self.plot_map.draw_contour(self.model.stp, self.lats, self.lons, stp_levels, gust_cmap[2:])
+        stp = self.plot_map.draw_contour(self.model.stp, self.lats, self.lons, stp_levels, stp_clr[2:], clabel=False)
 
         if self.resolution == 2.2:
             sdi2 = self.plot_map.draw_contourf(self.model.sdi_2.values, self.lats, self.lons, sdi_bounds, cm="seismic",
                                            opacity=0.9)
             cbar = cbar_h_left
-            cbar["label"] = "SDI_2, 1/с"
+            cbar["label"] = "SDI, 1/с"
             self.plot_map.draw_colorbar(sdi2, cbar, sdi_bounds)
         cbar = cbar_h_right
         cbar["label"] = "STP, 1"

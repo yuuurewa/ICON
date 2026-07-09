@@ -1,7 +1,13 @@
 import numpy as np
 
 pmsl_levels = {2.2: np.arange(900., 1100., 2.), 6.6: np.arange(900., 1100., 5.)}
-t_levels = np.arange(-45., 35., 2.)
+t_levels = {
+    ("warm", 2.2): np.arange(-15., 35., 2.),
+    ("cold", 2.2): np.arange(-45., 15., 2.),
+
+    ("warm", 6.6): np.arange(-30., 35., 2.),
+    ("cold", 6.6): np.arange(-50., 15., 2.),
+}
 level_temp = {
     ("warm", 6.6, 925): (-30, 30),
     ("warm", 6.6, 850): (-30, 30),
@@ -58,6 +64,13 @@ gust_cmap = (
             'white', '#E0F3FC', '#9EDBF7', '#00DD00', '#A1E72E', '#FFFF98', '#FAE95C', '#FDB061', '#F46D41', '#D63C4E',
             '#772584', '#4376B5', '#BBB6B1', 'black'
         )
+
+stp_clr = (
+    '#ffffff', '#d4f0ff', '#8fd3ff', '#4aa3ff', '#1f6feb',
+    '#1a9c3c', '#7adf3a', '#f2e85c', '#f7b32b', '#f06d2f',
+    '#d73027', '#a11d2f', '#6a1b9a', '#2b0a3d', '#000000'
+)
+
 cl_desc = {'clcl': 'нижнего', 'clcm': 'среднего', 'clch': 'верхнего', 'clct': 'Общая облачность'}
 cl_lvl = np.arange(0, 11, 1)
 type_cloud = ['hbas_con', 'htop_con', 'ceiling', 'cdct']
