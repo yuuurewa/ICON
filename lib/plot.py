@@ -137,8 +137,7 @@ class PlotParameter:
                        bounds=stp_levels, description=description, cmap_list=gust_cmap[1:], extend='max', hours_step=hours_step)
 
     def precip_sum(self, hours_step: int = 24) -> None:
-        description = f"Осадки ({hours_step} ч)"
-
+        description = f"Осадки за предыдущие {hours_step} ч"
         # title = f"{description} за {hours_step} часа(ов){self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = f"Осадки за {hours_step} ч., мм"
@@ -249,8 +248,8 @@ class PlotParameter:
 
     def precipitation(self, fc_time, lead_time) -> None:
         scale = self.data_step_min / 60
-        description = f"Осадки ({int(scale)}ч), облачность среднего яруса, давление на уровне моря"
-
+        sc = "предыдущий" if scale == 1 else "предыдущие"
+        description = f"Осадки за {sc} {int(scale)} ч, облачность среднего яруса, давление на уровне моря"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         precip_bounds = [v * scale for v in prec_bounds]
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
@@ -570,7 +569,9 @@ class PlotParameter:
         self.plot_map.save(f"{self.model.name}_{self.resolution}_dew_point_{lead_time}")
 
     def phase(self, fc_time, lead_time) -> None:
-        description = f"Фаза и интенсивность осадков ({int(self.data_step_min / 60)} ч)"
+        scale = self.data_step_min / 60
+        sc = "предыдущий" if scale == 1 else "предыдущие"
+        description = f"Преобладающая фаза осадков за {sc} {int(scale)} ч"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution, right_pos=1.085)
         rain_gsp = self.model.rain_gsp
