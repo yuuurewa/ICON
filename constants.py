@@ -73,7 +73,7 @@ stp_clr = (
 
 cl_desc = {'clcl': 'нижнего', 'clcm': 'среднего', 'clch': 'верхнего', 'clct': 'Общая облачность'}
 cl_lvl = np.arange(0, 11, 1)
-type_cloud = ['hbas_con', 'htop_con', 'ceiling', 'cdct']
+type_cloud = ['ceiling', 'cdct']
 levels_hbas_con = np.concatenate([np.arange(0, 1500, 150), np.arange(1500, 3001, 1500)])
 levels_cl_cov = np.concatenate([np.arange(0, 1500, 150), np.arange(1500, 12001, 1500)])
 cl_cov_colors = [
