@@ -64,7 +64,7 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
                 plot.def_map(Map6kmKz(IMAGE_DIR, date, "icon6"))
                 futures.append(executor.submit(plot.cloud, fc_time, lead_time, key))
 
-            for key in type_cloud:
+            for key in type_cloud[str(resolution)]:
                 plot.def_map(Map6kmKz(IMAGE_DIR, date, "icon6"))
                 futures.append(executor.submit(plot.cl_type, fc_time, lead_time, key))
             for future in as_completed(futures):
