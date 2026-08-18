@@ -521,17 +521,19 @@ class PlotParameter:
             description = f"Высота нижней границы общей облачности (≥ 5 баллов)"
         elif type=='cdct':
             description = f"Высота верхней границы общей облачности (≥ 5 баллов)"
+        elif type=='echotop':
+            description = f"Высота верхней границы радиолокационного эха ≥ 18 dBZ"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         type_cl = getattr(self.model, type)
         cloud_cover = type_cl.values - self.model.hsurf.values
-        cloud_cover[cloud_cover > 12001.0] = np.nan
+        cloud_cover[cloud_cover > 18001.0] = np.nan
         cloud_cover[cloud_cover < 0] = np.nan
         sigma = 20 if self.resolution == 2.2 else 6
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy')
-        if type=='htop_con' or type=='cdct':
+        if type=='htop_con' or type=='cdct' or type=='echotop':
             cc = self.plot_map.draw_contourf(cloud_cover, self.lats, self.lons, levels_cl_cov,
                                              cmap_list=cl_cov_colors[::-1], extend='max')
         elif type=='hbas_con':
