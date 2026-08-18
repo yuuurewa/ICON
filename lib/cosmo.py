@@ -110,7 +110,7 @@ class BaseData:
             open_file = os.path.join(path, name)
         else:
             open_file = filename
-        print(f"{open_file}{suffix}")
+        #print(f"{open_file}{suffix}")
         return xarray.open_dataset(
             f"{open_file}{suffix}", engine='cfgrib', chunks=None, cache=True,
             backend_kwargs={
@@ -258,6 +258,10 @@ class ModelData(BaseData):
     @property
     def lpi_max(self) -> ModelParam:
         return ModelParam("dbz", level_type="surface", param_name="LPI_MAX")
+
+    @property
+    def echotop(self) -> ModelParam:
+        return ModelParam("sw", level=18, param_name="ECHOTOPinM", short_name="ECHOTOPinM")
 
     @property
     def sdi_2(self) -> ModelParam:
