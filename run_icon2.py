@@ -17,7 +17,7 @@ if os.environ.get('HOSTNAME') == "xfront2" and sys.argv[1]:
     date = sys.argv[1]
 else:
     date = "2024071100"
-DATA_DIR, IMAGE_DIR = set_paths(NAME, resolution, date)
+DATA_DIR, IMAGE_DIR, _ = set_paths(NAME, resolution, date)
 
 resolution = float(resolution) / 10
 

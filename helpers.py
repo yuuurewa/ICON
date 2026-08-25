@@ -30,15 +30,18 @@ def set_paths(model: str, resolution: str, datestring: str) -> Tuple[str, str]:
         if os.environ.get('HOSTNAME') == "xfront2":
             DATA_DIR = f'/RHM-Lustre2.1/RHM-NSK/users/sibnigmi/icon1/ICON-kOper/OUTPUT-2024.07/{datestring}/{dom_folder[resolution]}/LLGRID'
             IMAGE_DIR = f'/RHM-Lustre2.1/RHM-NSK/users/sibnigmi/icon1/ICON-kOper/OUTPUT-2024.07/{datestring}/{dom_folder[resolution]}/maps'
+            M_DIR = f'/RHM-Lustre2.1/RHM-NSK/users/sibnigmi/icon1/ICON-kOper/OUTPUT-2024.07/{datestring}/{dom_folder[resolution]}/meteogramms'
         else:
             # DATA_DIR = f'/mnt/icon1/ICON-kOper/OUTPUT-2024.07/{datestring}/{dom_folder[resolution]}/LLGRID'
             DATA_DIR = f'/mnt/icon1/RSCH_ICON/OUTPUT-oper/{datestring}/{dom_folder[resolution]}/LLGRID'
             IMAGE_DIR = f'maps/ICON/{datestring}/{resolution}'
+            M_DIR = f'meteogramms/ICON/{datestring}/{resolution}'
+
 
     else:
         print("unknown model")
         raise NotImplementedError
-    return DATA_DIR, IMAGE_DIR,
+    return DATA_DIR, IMAGE_DIR, M_DIR,
 
 
 def initial_time(time: numpy.datetime64) -> datetime:
