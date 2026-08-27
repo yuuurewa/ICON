@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from lib.cosmo import ModelData, select_path
+from lib.map import BasePlot
 from helpers import set_paths
 from datetime import datetime, timedelta
 import locale
@@ -614,12 +615,13 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     if region:
         safe_region = translit(region, 'ru', reversed=True)
         safe_region = safe_region.replace(' ', '_').replace('(', '').replace(')', '').replace(',', '').replace('.', '')
-        output_name = f"M_{grid_type}_{safe_name}_{safe_region}.png"
+        output_name = f"M_{grid_type}_{safe_name}_{safe_region}"
     else:
-        output_name = f"M_{grid_type}_{safe_name}.png"
-    output_path = os.path.join(output_dir, output_name)
-    plt.savefig(output_path, dpi=100)
-    plt.close(fig)
+        output_name = f"M_{grid_type}_{safe_name}"
+    # output_path = os.path.join(output_dir, output_name)
+    plot_save = BasePlot(output_dir, "", "")
+    plot_save.fig=fig
+    plot_save.save(output_name, type='m')
 
 
 GRID_RESOLUTION = {

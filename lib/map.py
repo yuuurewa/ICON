@@ -179,36 +179,43 @@ class BasePlot:
         file.close()
         session.quit()
 
-    def save(self, name, image_type=None):
-        name = f"{name}hour.jpg"
-        filename = os.path.join(self.path, name)
-        self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11, zorder=60)
-        # if image_type == "tiff":
-        #     self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
-        # else:
-        self.fig.savefig(
-            filename,
-            format="jpg",
-            dpi=110,
-            bbox_inches='tight',
-            pil_kwargs={
-                "quality": 85,
-                "optimize": True,
-                "progressive": True
-            }
-        )
+    def save(self, name, type=None, image_type=None):
+        if type == 'm':
+            name = f"{name}.png"
+            filename = os.path.join(self.path, name)
+            self.fig.savefig(filename, dpi=100)
+        else:
+            name = f"{name}hour.jpg"
+            filename = os.path.join(self.path, name)
+            self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11,
+                         zorder=60)
+            # if image_type == "tiff":
+            #     self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
+            # else:
+            self.fig.savefig(
+                filename,
+                format="jpg",
+                dpi=110,
+                bbox_inches='tight',
+                pil_kwargs={
+                    "quality": 85,
+                    "optimize": True,
+                    "progressive": True
+                }
+            )
 
         plt.cla()
         # plt.clf()
         plt.close()
 
-        if os.environ.get('HOSTNAME') == "xfront2":
-            try:
-                self._ftp_send(filename, name)
-            except Exception as e:
-                print("FTP transfer failed")
-                print(e)
-                pass
+        if type == None:
+            if os.environ.get('HOSTNAME') == "xfront2":
+                try:
+                    self._ftp_send(filename, name)
+                except Exception as e:
+                    print("FTP transfer failed")
+                    print(e)
+                    pass
 
 
 class Map2km(BasePlot):
