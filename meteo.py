@@ -53,6 +53,21 @@ H_ID = 3008
 LAYERS = 65
 W, H = 3507, 2481
 
+MONTHS = [
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+]
+
 
 def detect_grid_type(path):
     test_file = f"{path}/lgfff00000000s.grb"
@@ -263,31 +278,52 @@ def setup_header(ax, start_date, grid_type, station_name, header_coords):
     ax.plot([0.3, 0.3], [0.5, 1], 'k', lw=1)
     ax.plot([0.7, 0.7], [0.5, 1], 'k', lw=1)
     ax.plot([0, 1], [0.5, 0.5], 'k', lw=1)
+
     ax.text(0.15, 0.75, f"{header_coords}", ha="center", va="center")
     ax.text(0.5, 0.75, station_name, ha="center", va="center")
 
-    # Выбор названия сетки
     if grid_type == "ICON_2.2":
         grid_name = "ICON 2.2 км"
     else:
         grid_name = "ICON 6.6 км"
+
     ax.text(0.85, 0.75, grid_name, ha="center", va="center")
 
-    ax.text(0.5, 0.25, f"{start_date.strftime('%d %B %Y')} {start_date.hour:02d} UTC", ha="center", va="center")
+    date_text = f"{start_date.day} {MONTHS[start_date.month - 1]} {start_date.year}"
+
+    ax.text(
+        0.5,
+        0.25,
+        f"{date_text} {start_date.hour:02d} UTC",
+        ha="center",
+        va="center"
+    )
 
 
 def setup_common_axes(axes_list, start_date, ticks_3h):
-    labels = [dt.strftime("%d %B") if dt.hour == 0 else str(dt.hour)
-              for dt in [start_date + timedelta(hours=int(t)) for t in ticks_3h]]
+    labels = [
+        (
+            f"{dt.day} {MONTHS[dt.month - 1]}"
+            if dt.hour == 0
+            else str(dt.hour)
+        )
+        for dt in [
+            start_date + timedelta(hours=int(t))
+            for t in ticks_3h
+        ]
+    ]
+
     ticks_24h = np.arange((24 - start_date.hour) % 24, 49, 24)
+
     for ax in axes_list:
         ax.set_xlim(-0.5, 48.5)
         ax.set_xticks(ticks_3h)
         ax.set_xticklabels(labels, fontsize=8)
+
         ax.grid(which='major', axis='x', linestyle='--', linewidth=0.5, alpha=0.5, color='k')
+
         for x in ticks_24h:
             ax.axvline(x=x, color='black', linestyle='--', linewidth=1, alpha=0.7, zorder=10)
-
 
 def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None, grid_type=None):
     if grid_type is None:
