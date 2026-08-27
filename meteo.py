@@ -14,21 +14,46 @@ import time
 from multiprocessing import Pool, cpu_count
 import sys
 from transliterate import translit
+from pathlib import Path
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
-# ============ КОНСТАНТЫ ============
-S_MAP = {"totprec": 0, "ws10": 5, "vmax10": 11, "pmsl": 10, "htop_con": 2, "hbas_con": 1, "td2m": 9, "u10": 3,
-         "v10": 4, "t2m": 8, "snow_gsp": 7, "snow_con": 6}
-PL_MAP = {"T925": 3, "T850": 2, "U500": 4, "V500": 8, "U700": 5, "V700": 9, "U850": 6, "V850": 10}
-Z_MAP = {"U500m": 0, "V500m": 1}
+GRID_CONFIG = {
+    "ICON_6.6": {
+        "suffix_s": "m",
+        "suffix_pl": "p",
+        "suffix_z": "h",
+
+        "S_MAP": {"totprec": 0, "ws10": 5, "vmax10": 11, "pmsl": 10, "htop_con": 2, "hbas_con": 1, "td2m": 9, "u10": 3,
+         "v10": 4, "t2m": 8, "snow_gsp": 7, "snow_con": 6},
+
+        "PL_MAP": {"T925": 3, "T850": 2, "U500": 4, "V500": 8, "U700": 5, "V700": 9, "U850": 6, "V850": 10},
+
+        "Z_MAP": {"U500m": 0, "V500m": 1}
+    },
+
+    "ICON_2.2": {
+        "suffix_s": "s",
+        "suffix_pl": "pl",
+        "suffix_z": "z",
+
+        "S_MAP": {"totprec": 13, "ws10": 58, "vmax10": 65, "pmsl": 63, "htop_con": 5, "hbas_con": 4, "td2m": 62,
+                  "htop": 68, "hbas": 67, "CLCL": 0, "CLCM": 1, "CLCH": 2, "u10": 56, "v10": 57, "t2m": 61,
+                  "snow_gsp": 11, "snow_con": 7},
+
+        "PL_MAP": {"T925": 4, "T850": 3, "U500": 15, "V500": 22, "U700": 16, "V700": 23, "U850": 17, "V850": 24},
+
+        "Z_MAP": {"U500m": 11, "V500m": 24}
+    }
+}
+
 C_MAP = {"HSURF": 0}
 CCL_ID, H_ID, LAYERS = 260257, 3008, 65
 W, H = 3507, 2481
 
 
 def detect_grid_type(path):
-    test_file = f"{path}/lgfff00000000m.grb"
+    test_file = f"{path}/lgfff00000000s.grb"
     with open(test_file, "rb") as f:
         gid = codes_grib_new_from_file(f)
         if gid is not None:
@@ -80,7 +105,7 @@ def get_point_index(model, lat, lon):
 
 
 def get_start_date(path):
-    with open(f"{path}/lgfff00000000m.grb", "rb") as f:
+    with open(f"{path}/lgfff00000000s.grb", "rb") as f:
         gid = codes_grib_new_from_file(f)
         y, m, d, h = codes_get(gid, "year"), codes_get(gid, "month"), codes_get(gid, "day"), codes_get(gid,
                                                                                                        "dataTime") // 100
@@ -274,17 +299,19 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     y, x, idx, nx = get_point_index(model, lat, lon)
     start_date = get_start_date(path)
     season = "warm" if 4 <= start_date.month <= 9 else "cold"
+    config = GRID_CONFIG[grid_type]
 
-    series_s = load_series(path, "lgfff", "m", S_MAP, idx, nx,)
-    series_pl = load_series(path, "lgfff", "p", PL_MAP, idx, nx)
-    series_z = load_series(path, "lgfff", "h", Z_MAP, idx, nx)
+    series_s = load_series(path, "lgfff", config["suffix_s"], config["S_MAP"], idx, nx)
+    series_pl = load_series(path, "lgfff", config["suffix_pl"], config["PL_MAP"], idx, nx)
+    series_z = load_series(path, "lgfff", config["suffix_z"], config["Z_MAP"], idx, nx)
 
     if hasattr(model.lats, 'values'):
         ny = model.lats.values.shape[0] if model.lats.values.ndim == 2 else len(model.lats.values)
     else:
         ny = model.lats.shape[0] if model.lats.ndim == 2 else len(model.lats)
 
-    prec_series = load_series(path, "lgfff", "m", S_MAP, idx, nx, is_prec=True, y=y, x=x, ny=ny)
+    prec_series = load_series(path, "lgfff", config["suffix_s"], config["S_MAP"], idx, nx, is_prec=True,
+                              y=y, x=x, ny=ny)
     hsurf = read_file_point(f"{path}/lgfff00000000c.grb", C_MAP, idx)["HSURF"]
     ccl_profile, h_profile = load_series(path, "lgfff", "clc", "ccl_h", idx, nx)
 
@@ -334,8 +361,6 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     # ===== ОБЛАЧНОСТЬ =====
     ax = axes['cloud']
 
-    # for y_pos in range(2, 11, 2):
-    #     ax.axhline(y=y_pos, color='gray', linestyle='--', linewidth=0.5, alpha=0.7)
     ax.set(xlim=(-0.5, 48.5), ylim=(0, 12), xticklabels=[])
     ax.tick_params(axis='y', labelsize=8)
 
@@ -498,7 +523,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
                         bbox=dict(boxstyle="round,pad=0.25", facecolor="white",
                                   edgecolor=color, alpha=0.5, linewidth=1), zorder=7)
 
-    # ===== ЛЕГЕНДА =====
+    # ===== ОКРЕСТНОСТЬ =====
     ax = axes['legend']
     tprec_ser = np.where(np.round(compute_tprec(prec_series), 1) < 0.1, np.nan, compute_tprec(prec_series))
     cmap_prec = ListedColormap(['#aaF5aa', '#4FE74F', '#12B512', '#005A00'])
@@ -533,10 +558,27 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     fig.text(1, 0, "©СибНИГМИ", ha="right", va="bottom", fontsize=10, zorder=60)
 
     # Сохраняем
+    if lat == 64.233 and lon == 87.467:
+        region = 'Кр. край'
+    elif lat == 58.083 and lon == 54.683:
+        region = 'Пермский край'
+    elif lat == 55.25 and lon == 94.883:
+        region = 'Кр. край'
+    elif lat == 51.1 and lon == 114.517:
+        region = 'Заб. край'
+    else:
+        region=None
+
     os.makedirs(output_dir, exist_ok=True)
     safe_name = translit(station_name, 'ru', reversed=True)
-    safe_name = safe_name.replace(' ', '_').replace('(', '').replace(')', '')
-    output_name = f"M_{grid_type}_{safe_name}.png"
+    safe_name = (safe_name.replace(' ', '_').replace('(', '').replace(')', '')
+                 .replace(',', '').replace('.', '').replace("'", ''))
+    if region:
+        safe_region = translit(region, 'ru', reversed=True)
+        safe_region = safe_region.replace(' ', '_').replace('(', '').replace(')', '').replace(',', '').replace('.', '')
+        output_name = f"M_{grid_type}_{safe_name}_{safe_region}.png"
+    else:
+        output_name = f"M_{grid_type}_{safe_name}.png"
     output_path = os.path.join(output_dir, output_name)
     plt.savefig(output_path, dpi=100)
     plt.close(fig)
@@ -551,15 +593,21 @@ GRID_RESOLUTION = {
 def process_task(task):
     station, grid_name, DATA_DIR, M_DIR = task
 
-    draw_meteogram(
-        path=DATA_DIR,
-        lat=station['lat'],
-        lon=station['lon'],
-        station_name=station['Название'],
-        header_coords=station.get('Координаты', None),
-        output_dir=M_DIR,
-        grid_type=grid_name
-    )
+    try:
+        draw_meteogram(
+            path=DATA_DIR,
+            lat=station['lat'],
+            lon=station['lon'],
+            station_name=station['Название'],
+            header_coords=station.get('Координаты', None),
+            output_dir=M_DIR,
+            grid_type=grid_name
+        )
+
+        return True, station['Название'], grid_name, None
+
+    except Exception as e:
+        return False, station['Название'], grid_name, str(e)
 
 
 def run_from_config(path, conf_file='config_with_grids.json'):
@@ -590,38 +638,30 @@ def run_from_config(path, conf_file='config_with_grids.json'):
             tasks.append((station, grid_name, DATA_DIR, M_DIR))
 
     total = len(tasks)
-    print(f"\n{'=' * 60}")
     print(f"Начинаем генерацию {total} метеограмм")
     print(f"Используется ядер: {min(cpu_count(), len(tasks))}")
-    print(f"{'=' * 60}\n")
 
     with Pool(processes=min(cpu_count(), total)) as pool:
         for i, _ in enumerate(pool.imap_unordered(process_task, tasks), 1):
             if i % max(1, total // 10) == 0 or i == total:
                 elapsed = time.time() - start_time
                 percent = i / total * 100
-                eta = (elapsed / i) * (total - i) if i > 0 else 0
-                print(f"\rПрогресс: {i}/{total} ({percent:.1f}%) | Прошло: {elapsed:.1f}с | Осталось: ~{eta:.1f}с",
+                print(f"\n\rПрогресс: {i}/{total} ({percent:.1f}%) | Прошло: {elapsed:.1f}с",
                       end="", flush=True)
 
     total_time = time.time() - start_time
-    print(f"\n\n{'=' * 60}")
-    print(f"Готово! Сгенерировано {total} метеограмм")
-    print(f"⏱️ Общее время: {total_time:.1f}с ({total_time / 60:.1f} мин)")
-    print(f"📊 Среднее время на метеограмму: {total_time / total:.1f}с")
-    print(f"{'=' * 60}")
+    print(f"\nСгенерировано {total} метеограмм")
+    print(f"\nОбщее время: {total_time:.1f}с ({total_time / 60:.1f} мин)")
 
 
-# ============ ТОЧКА ВХОДА ============
 if __name__ == "__main__":
     # Вариант 1: Запуск из конфигурационного файла
-    from pathlib import Path
-
     path = Path(__file__).resolve().parent
     run_from_config(path)
+    exit(0)
 
     # Вариант 2: Запуск для одной станции (для отладки)
-    #draw_meteogram('/home/vika/icon1707', 52.766, 87.826, 'Таштагол', 'Учебная')
-    # draw_meteogram('/home/vika/icon071718kz', 54.973, 82.891, 'Новосибирск', 'Учебная')
+    #draw_meteogram('/home/vika/icon1707', 52.766, 87.826, 'Таштагол', '')
+    # draw_meteogram('/home/vika/icon071718kz', 54.973, 82.891, 'Новосибирск', '')
 
 
