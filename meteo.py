@@ -48,7 +48,9 @@ GRID_CONFIG = {
 }
 
 C_MAP = {"HSURF": 0}
-CCL_ID, H_ID, LAYERS = 260257, 3008, 65
+CCL_IDS = (260257, 500098)
+H_ID = 3008
+LAYERS = 65
 W, H = 3507, 2481
 
 
@@ -168,15 +170,16 @@ def load_series(path, prefix, suffix, msg_map, idx, nx, hours=49, is_prec=False,
             with open(fname, "rb") as f:
                 while True:
                     gid = codes_grib_new_from_file(f)
-                    if gid is None: break
+                    if gid is None:
+                        break
                     try:
-                        pid, level = codes_get(gid, "paramId"), codes_get(gid, "topLevel") - 1
-                        if level < LAYERS and pid in (CCL_ID, H_ID):
-                            val = codes_get_double_element(gid, "values", idx)
-                            if pid == CCL_ID:
-                                ccl[level] = val
-                            else:
-                                h_vals[level] = val
+                        pid = codes_get(gid, "paramId")
+                        level = codes_get(gid, "topLevel") - 1
+                        if level < LAYERS:
+                            if pid in CCL_IDS:
+                                ccl[level] = codes_get_double_element(gid, "values", idx)
+                            elif pid == H_ID:
+                                h_vals[level] = codes_get_double_element(gid, "values", idx)
                     finally:
                         codes_release(gid)
             ccl_all[idx_time] = ccl
@@ -257,10 +260,10 @@ def setup_header(ax, start_date, grid_type, station_name, header_coords):
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.add_patch(plt.Rectangle((0, 0.01), 0.999, 1, fill=False, linewidth=1))
-    ax.plot([0.25, 0.25], [0.5, 1], 'k', lw=1)
-    ax.plot([0.75, 0.75], [0.5, 1], 'k', lw=1)
+    ax.plot([0.3, 0.3], [0.5, 1], 'k', lw=1)
+    ax.plot([0.7, 0.7], [0.5, 1], 'k', lw=1)
     ax.plot([0, 1], [0.5, 0.5], 'k', lw=1)
-    ax.text(0.125, 0.75, f"{header_coords}", ha="center", va="center")
+    ax.text(0.15, 0.75, f"{header_coords}", ha="center", va="center")
     ax.text(0.5, 0.75, station_name, ha="center", va="center")
 
     # Выбор названия сетки
@@ -268,7 +271,7 @@ def setup_header(ax, start_date, grid_type, station_name, header_coords):
         grid_name = "ICON 2.2 км"
     else:
         grid_name = "ICON 6.6 км"
-    ax.text(0.875, 0.75, grid_name, ha="center", va="center")
+    ax.text(0.85, 0.75, grid_name, ha="center", va="center")
 
     ax.text(0.5, 0.25, f"{start_date.strftime('%d %B %Y')} {start_date.hour:02d} UTC", ha="center", va="center")
 
@@ -314,7 +317,6 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
                               y=y, x=x, ny=ny)
     hsurf = read_file_point(f"{path}/lgfff00000000c.grb", C_MAP, idx)["HSURF"]
     ccl_profile, h_profile = load_series(path, "lgfff", "clc", "ccl_h", idx, nx)
-
 
     time = np.arange(49)
     ticks_3h = np.arange(0, 49, 3)
@@ -663,5 +665,3 @@ if __name__ == "__main__":
     # Вариант 2: Запуск для одной станции (для отладки)
     #draw_meteogram('/home/vika/icon1707', 52.766, 87.826, 'Таштагол', '')
     # draw_meteogram('/home/vika/icon071718kz', 54.973, 82.891, 'Новосибирск', '')
-
-
