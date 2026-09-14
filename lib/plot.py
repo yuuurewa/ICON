@@ -301,7 +301,10 @@ class PlotParameter:
             dbz_max = self.model.dbz_ctmax.values
         dbz = self.plot_map.draw_contourf(dbz_max, self.lats, self.lons, dbz_bounds, cmap_list=dbz_cmap, extend='max')
         cbar = cbar_full[self.resolution]
-        cbar["label"] = "Max отражаемость, dbZ (за 1 час)"
+        if self.resolution == 2.2:
+            cbar["label"] = "Max отражаемость, dbZ (за 1 час)"
+        else:
+            cbar["label"] = "Max отражаемость, dbZ (за 3 часа)"
         self.plot_map.draw_colorbar(dbz, cbar, dbz_bounds)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_dbz_ctmax_{lead_time}")
 
