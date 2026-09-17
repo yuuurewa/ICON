@@ -321,7 +321,7 @@ def setup_common_axes(axes_list, start_date, ticks_3h):
         ax.set_xticks(ticks_3h)
         ax.set_xticklabels(labels, fontsize=8)
 
-        ax.grid(which='major', axis='x', linestyle='--', linewidth=0.5, alpha=0.5, color='k')
+        ax.grid(which='major', axis='x', linestyle='--', linewidth=0.5, alpha=0.7, color='k')
 
         for x in ticks_24h:
             ax.axvline(x=x, color='black', linestyle='--', linewidth=1, alpha=0.7, zorder=10)
@@ -369,9 +369,10 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     for level in levels:
         u = series_z["U500m"] if level == "500m" else series_pl[f"U{level}"]
         v = series_z["V500m"] if level == "500m" else series_pl[f"V{level}"]
-        ax.barbs(time, np.full_like(time, levels[level]), 1.94384 * u, 1.94384 * v, length=5, linewidth=0.7)
+        ax.barbs(time, np.full_like(time, levels[level]), 1.94384 * u, 1.94384 * v, length=5, linewidth=0.5,
+                 sizes={'spacing': 0.18})
 
-    ax.set(xlim=(-0.5, 48.5), ylim=(-0.5, max(levels.values()) + 0.8), xticks=ticks_3h, xticklabels=[])
+    ax.set(xlim=(-0.5, 48.5), ylim=(-0.7, max(levels.values()) + 0.7), xticks=ticks_3h, xticklabels=[])
     ax.set_yticks(list(levels.values()))
     ax.set_yticklabels(['500 м', '850 гПа', '700 гПа', '500 гПа'], fontsize=8)
     ax.tick_params(axis='y', labelsize=8)
@@ -387,15 +388,27 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     ax.plot(time, series_s["t2m"] - 273, 'r')
     ax.plot(time, series_pl["T925"] - 273, color='orangered', linestyle='-.')
     ax.plot(time, series_pl["T850"] - 273, color='darkorange', linestyle=(0, (10, 5)))
-    ax.set(xlim=(-0.5, 48.5), xticks=ticks_3h, xticklabels=[], ylim=(-40, 20) if season == 'cold' else (-30, 40))
+
+    t2m = series_s["t2m"] - 273
+    t925 = series_pl["T925"] - 273
+    t850 = series_pl["T850"] - 273
+
+    temp_min = np.nanmin([t2m.min(), t925.min(), t850.min()])
+    temp_max = np.nanmax([t2m.max(), t925.max(), t850.max()])
+    ymin = np.floor((temp_min - 10) / 5) * 5
+    ymax = np.ceil((temp_max + 10) / 5) * 5
+
+    ax.set(xlim=(-0.5, 48.5), xticks=ticks_3h, xticklabels=[], ylim=(ymin, ymax))
     ax.tick_params(axis='y', labelsize=8)
-    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+    ax.yaxis.set_minor_locator(FixedLocator(np.arange(ymin, ymax + 1, 5)))
+    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='k', alpha=0.8)
     ax.axhline(y=0, color='k', linestyle='-', linewidth=0.5, alpha=0.7)
     ax.set_xticks(np.arange(0, 49, 1), minor=True)
 
     ax_temp_right = ax.twinx()
     ax_temp_right.set_ylim(ax.get_ylim())
     ax_temp_right.tick_params(axis='y', labelsize=8)
+    ax_temp_right.yaxis.set_minor_locator(FixedLocator(np.arange(ymin, ymax + 1, 5)))
 
     # ===== ОБЛАЧНОСТЬ =====
     ax = axes['cloud']
@@ -455,7 +468,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
             ax.text(
                 i,
                 0.5,
-                str(int(round(height))),
+                str(int(round(height / 50) * 50)).replace("1000", "950"),
                 fontsize=7,
                 ha="center",
                 va="center",
@@ -473,7 +486,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     ax = axes['press']
     ax.plot(time, series_s["pmsl"] / 100, 'k', linewidth=1.7)
     ax.barbs(time, np.full_like(time, 995), 1.94384 * series_s["u10"], 1.94384 * series_s["v10"], length=5,
-             linewidth=0.7)
+             linewidth=0.5, sizes={'spacing': 0.18})
     major_ticks = np.arange(985, 1041, 10)
     ax.set(xlim=(-0.5, 48.5), ylim=(985, 1045), xticklabels=[], yticks=major_ticks,
            yticklabels=[str(t) for t in major_ticks])
@@ -481,7 +494,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     ax.tick_params(axis='y', which='major', length=6)
     ax.tick_params(axis='y', which='minor', length=3)
     ax.tick_params(axis='y', labelsize=8)
-    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, alpha=0.5)
+    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='k', alpha=0.8)
 
     ax_press_right = ax.twinx()
     ax_press_right.set_ylim(985, 1045)
@@ -524,8 +537,8 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
 
     for prec_bar, prec_val in zip(bars, tprec_plot):
         if not np.isnan(prec_val):
-            ax.text(prec_bar.get_x() + prec_bar.get_width() / 2, 18, f"{prec_val:.1f}",
-                    ha="center", va="bottom", fontsize=6.5, color="black", style='italic')
+            ax.text(prec_bar.get_x() + prec_bar.get_width() / 2, 17.5, f"{prec_val:.1f}",
+                    ha="center", va="bottom", fontsize=7, color="black", style='italic')
 
     ax1 = ax.twinx()
 
@@ -535,13 +548,23 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     ax1.plot(time, t2m, "r", zorder=10)
     ax1.plot(time, td2m, "g--", zorder=5)
 
-    ax1.set(xlim=(-0.5, 48.5), xticks=ticks_3h, xticklabels=[],
-            ylim=(-40, 20) if season == 'cold' else (-30, 40))
+    temp_min = np.nanmin([t2m.min(), td2m.min()])
+    temp_max = np.nanmax([t2m.max(), td2m.max()])
+    ymin = np.floor((temp_min - 10) / 5) * 5
+    ymax = np.ceil((temp_max + 10) / 5) * 5
 
+
+    major_ticks = np.arange(ymin+5, ymax+1, 10, dtype=int)
+    ax1.set(xlim=(-0.5, 48.5), xticks=ticks_3h, xticklabels=[], ylim=(ymin, ymax), yticks=major_ticks,
+           yticklabels=[str(t) for t in major_ticks])
+    ax1.yaxis.set_minor_locator(FixedLocator(np.arange(ymin, ymax+1, 10)))
+    ax1.tick_params(axis='y', which='major', length=6)
+    ax1.tick_params(axis='y', which='minor', length=3)
     ax1.tick_params(axis="y", labelsize=8, left=True, right=True, labelleft=True, labelright=True)
     ax1.yaxis.set_ticks_position("both")
 
-    ax1.grid(which="major", axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
+    ax1.grid(which="major", axis="y", linestyle="--", linewidth=0.5, color='k', alpha=0.8)
+    ax1.grid(which="minor", axis="y", linestyle="--", linewidth=0.5, color='k', alpha=0.8)
 
     dates = [start_date + timedelta(hours=i) for i in range(len(t2m))]
     days = defaultdict(list)
@@ -692,6 +715,7 @@ def run_from_config(path, conf_file='config_with_grids.json'):
     total_time = time.time() - start_time
     print(f"\nСгенерировано {total} метеограмм")
     print(f"\nОбщее время: {total_time:.1f}с ({total_time / 60:.1f} мин)")
+
 
 
 if __name__ == "__main__":
