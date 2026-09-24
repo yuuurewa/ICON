@@ -110,18 +110,20 @@ class BasePlot:
                                 transform_first=True,
                                 extend=extend)
 
-    def draw_colorbar(self, c, cbar, levels):
+    def draw_colorbar(self, c, cbar, levels, extend=None):
         ticks = np.array(levels, dtype=float).copy()
         if "cax" in cbar.keys():
             colorbar_ax = self.fig.add_axes(cbar["cax"])
 
             colorbar = self.fig.colorbar(c, cax=colorbar_ax, orientation=cbar["orientation"],
-                                    ticks=ticks)  # , extend='both')
+                                    ticks=ticks, extend=extend)  # , extend='both')
         else:
-            colorbar = self.fig.colorbar(c, ax=self.ax, orientation=cbar["orientation"], ticks=ticks)
+            colorbar = self.fig.colorbar(c, ax=self.ax, orientation=cbar["orientation"], ticks=ticks, extend=extend)
 
         colorbar.set_label(cbar["label"])
         colorbar.ax.tick_params(labelsize=9)
+
+        return colorbar
 
     def draw_contour(self, geom, lats, lons, levels, color, linewidth=1, linestyles='solid', clabel=True, **kwargs):
         c = self.ax.contour(
@@ -185,7 +187,7 @@ class BasePlot:
             filename = os.path.join(self.path, name)
             self.fig.savefig(filename, dpi=100)
         else:
-            name = f"{name}hour.jpg"
+            name = f"{name}hour.png"
             filename = os.path.join(self.path, name)
             self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11,
                          zorder=60)
@@ -203,19 +205,20 @@ class BasePlot:
                     "progressive": True
                 }
             )
+            #self.fig.savefig(filename, dpi=300, bbox_inches='tight')
 
         plt.cla()
         # plt.clf()
         plt.close()
 
-        if type == None:
-            if os.environ.get('HOSTNAME') == "xfront2":
-                try:
-                    self._ftp_send(filename, name)
-                except Exception as e:
-                    print("FTP transfer failed")
-                    print(e)
-                    pass
+
+        if os.environ.get('HOSTNAME') == "xfront2":
+            try:
+                self._ftp_send(filename, name)
+            except Exception as e:
+                print("FTP transfer failed")
+                print(e)
+                pass
 
 
 class Map2km(BasePlot):
@@ -252,20 +255,20 @@ class Map2km(BasePlot):
     )
 
 
-# class Map6km(BasePlot):
-#
-#     extent = (60, 115, 42, 69)
-#     cent_lat = 53.2
-#     cent_lon = 85.5
-#     figsize = (12, 8)
-#     proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
-#     cities = (
-#         {"name": "Челябинск", "lat": 55.159, "lon": 61.402},
-#         {"name": "Екатеринбург", "lat": 56.838, "lon": 60.597},
-#         {"name": "Курган", "lat": 55.444, "lon": 65.316},
-#         {"name": "Тюмень", "lat": 57.153, "lon": 65.534},
-#         {"name": "Салехард", "lat": 66.549, "lon": 66.6083},
-#         {"name": "Ханты-Мансийск", "lat": 61.002, "lon": 69.018},
+class Kushva(BasePlot):
+
+    extent = (50, 68, 51, 61)
+    cent_lat = 56.2
+    cent_lon = 60.3
+    figsize = (14, 9)
+    proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
+    cities = (
+         {"name": "Челябинск", "lat": 55.159, "lon": 61.402},
+         {"name": "Екатеринбург", "lat": 56.838, "lon": 60.597},
+         {"name": "Курган", "lat": 55.444, "lon": 65.316},
+         {"name": "Тюмень", "lat": 57.153, "lon": 65.534},
+         {"name": "Уфа", "lat": 54.62, "lon": 55.81},
+         {"name": "Кушва", "lat": 58.28, "lon": 59.74},
 #         {"name": "Норильск", "lat": 69.349, "lon": 88.201},
 #         {"name": "Тура", "lat": 64.276, "lon": 100.198},
 #         {"name": "Красноярск", "lat": 56.008, "lon": 92.87},
@@ -280,7 +283,7 @@ class Map2km(BasePlot):
 #         {"name": "Новосибирск", "lat": 55.02, "lon": 82.8},
 #         {"name": "Омск", "lat": 54.58, "lon": 73.23},
 #         {"name": "Томск", "lat": 56.29, "lon": 84.57}
-#     )
+     )
 
 
 class Map6kmKz(BasePlot):

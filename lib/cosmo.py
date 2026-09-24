@@ -401,6 +401,10 @@ class ModelData(BaseData):
     def cdct(self) -> ModelParam:
         return ModelParam("s", level=0, param_name="CDCT", short_name="CDCT")
 
+    @property
+    def h_snow(self) -> ModelParam:
+        return ModelParam("s", level_type="surface", level=0, param_name="H_SNOW", short_name="H_SNOW")
+
 class ComputedModelData(ModelData):
     def __init__(self, name):
         super().__init__()

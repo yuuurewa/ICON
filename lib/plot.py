@@ -14,6 +14,9 @@ from scipy.ndimage import gaussian_filter
 from math import floor, ceil
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from matplotlib.colors import ListedColormap
+from matplotlib.ticker import FuncFormatter
+
 
 class PlotParameter:
     def __init__(
@@ -151,19 +154,25 @@ class PlotParameter:
         tot_prec_previous = np.zeros(self.lats.shape)
         for end_hour in end_hours:
             for _ in model_fileset(start_hour * 60, end_hour * 60, hours_step * 60):
-                tot_prec_previous = self.model.tot_prec.values
+                tot_prec_previous = gaussian_filter(self.model.tot_prec.values, 1)
             for lead_time_minutes in model_fileset(end_hour * 60, end_hour * 60 + 1, 60):
-                tot_prec = self.model.tot_prec.values - tot_prec_previous
-                tot_prec_previous = self.model.tot_prec.values
+                tot_prec = gaussian_filter(self.model.tot_prec.values, 1) - tot_prec_previous
+                tot_prec_previous = gaussian_filter(self.model.tot_prec.values, 1)
                 #model_time = initial_time(self.model.time.values)
                 fc_time = self.model_time + timedelta(minutes=lead_time_minutes)
                 fc_time = fc_time.strftime("%d.%m.%Y %H UTC")
                 # title_fc = f"{fc_time}, {title} +({start_hour}-{end_hour})ч"
+                tot_prec = np.ma.masked_where(tot_prec < 0.02, tot_prec)
                 lead_time = f"({start_hour}-{end_hour})"
                 self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
-                c = self.plot_map.draw_contourf(tot_prec, self.lats, self.lons, bounds,
-                                           cmap_list=prec_cmap, extend='max')
-                self.plot_map.draw_colorbar(c, cbar, bounds)
+                prec_cmap_obj = ListedColormap(prec_cmap[:-1])
+                prec_cmap_obj.set_under('white')
+                prec_cmap_obj.set_bad('white')
+                prec_cmap_obj.set_over(prec_cmap[-1])
+                prec_norm = mcolors.BoundaryNorm(bounds, prec_cmap_obj.N, clip=False)
+                c = self.plot_map.ax.pcolormesh(self.lons, self.lats, tot_prec, cmap=prec_cmap_obj, norm=prec_norm,
+                                                shading="auto", transform=ccrs.PlateCarree())
+                self.plot_map.draw_colorbar(c, cbar, bounds, extend='both')
                 if hours_step == 24:
                     self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_prec_{end_hour+1:03d}")
                 else:
@@ -251,7 +260,10 @@ class PlotParameter:
         sc = "предыдущий" if scale == 1 else "предыдущие"
         description = f"Осадки за {sc} {int(scale)} ч, облачность среднего яруса, давление на уровне моря"
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
-        precip_bounds = [v * scale for v in prec_bounds]
+        if self.resolution == 2.2:
+            precip_bounds = prec_bounds
+        else:
+            precip_bounds = [v * 2 for v in prec_bounds]
         self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
         sigma = 15 if self.resolution == 2.2 else 6
         cl = gaussian_filter(self.model.clcm.values, sigma=6)
@@ -267,17 +279,16 @@ class PlotParameter:
         next_lead_time = lead_time_min + self.data_step_min
         if previous_lead_time > 0:
             for _ in model_fileset(previous_lead_time, lead_time_min, self.data_step_min):
-                previous_prec = self.model.tot_prec.values
+                previous_prec = gaussian_filter(self.model.tot_prec.values, 1)
             for _ in model_fileset(lead_time_min, next_lead_time, self.data_step_min):
-                prec = self.model.tot_prec.values - previous_prec
+                prec = gaussian_filter(self.model.tot_prec.values, 1) - previous_prec
         else:
-            prec = self.model.tot_prec.values
+            prec = gaussian_filter(self.model.tot_prec.values, 1)
 
         critical_values = np.where(prec >= 0.1, prec, np.nan)
         if np.count_nonzero(~np.isnan(critical_values)) > 20:
-            prec = self.plot_map.draw_contourf(prec, self.lats, self.lons, precip_bounds, cmap_list=prec_cmap,
-                                               extend='max')
-
+            prec_for_plot = np.where(prec >= precip_bounds[0], prec, np.nan)
+            prec = self.plot_map.draw_contourf(prec_for_plot, self.lats, self.lons, precip_bounds, cmap_list=prec_cmap, extend='both')
             cbar = cbar_h_right
             cbar["label"] = f"Осадки за {int(scale)}ч., мм"
             self.plot_map.draw_colorbar(prec, cbar, precip_bounds)
@@ -577,11 +588,16 @@ class PlotParameter:
         scale = self.data_step_min / 60
         sc = "предыдущий" if scale == 1 else "предыдущие"
         description = f"Преобладающая фаза осадков за {sc} {int(scale)} ч"
-        # title = f"{fc_time}, {description}{self.title} +{lead_time}"
-        self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution, right_pos=1.085)
+
+        TRACE_COMPONENT = 0.01  # компоненты меньше 0.01 мм считаем следовыми
+        MIN_TOTAL = 0.05  # осадки меньше 0.05 мм за час не отображаем
+        MIN_PHASE_SHARE = 0.10  # минимальная доля каждой фазы для смешанных осадков
+
+        self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution,
+                             right_pos=1.085)
         rain_gsp = self.model.rain_gsp
-        curr_rain = self.model.rain_con.values + self.model.rain_gsp.values
-        curr_snow = self.model.snow_con.values + self.model.snow_gsp.values
+        curr_rain = (self.model.rain_con.values + self.model.rain_gsp.values)
+        curr_snow = (self.model.snow_con.values + self.model.snow_gsp.values)
 
         if getattr(self, "_prev_lead_time", None) is None:
             rain = curr_rain
@@ -593,27 +609,27 @@ class PlotParameter:
         self._prev_rain = curr_rain
         self._prev_snow = curr_snow
         self._prev_lead_time = lead_time
-        rain = np.maximum(rain, 0)
-        snow = np.maximum(snow, 0)
+        rain = np.maximum(rain, 0.0)
+        snow = np.maximum(snow, 0.0)
+        rain = np.where(rain < TRACE_COMPONENT, 0.0, rain)
+        snow = np.where(snow < TRACE_COMPONENT, 0.0, snow)
         total = rain + snow
-        p_rain = rain / (total + 1e-6)
-        p_snow = snow / (total + 1e-6)
-        is_rain = rain > 0
-        is_snow = snow > 0
-        is_mixed = is_rain & is_snow
-        rain_only = np.where(is_rain & ~is_snow, rain, np.nan)
-        snow_only = np.where(is_snow & ~is_rain, snow, np.nan)
-        mixed = np.full_like(total, np.nan)
-        mixed_mask = is_mixed & (p_rain >= 0.1) & (p_snow >= 0.1)
-        rain_mask = is_mixed & (p_snow < 0.1)
-        snow_mask = is_mixed & (p_rain < 0.1)
-        mixed[mixed_mask] = total[mixed_mask]
-        rain_only[rain_mask] = total[rain_mask]
-        snow_only[snow_mask] = total[snow_mask]
+        p_rain = np.divide(rain,total,out=np.zeros_like(total),where=total > 0)
+        p_snow = np.divide(snow, total, out=np.zeros_like(total), where=total > 0)
+        has_precipitation = total >= MIN_TOTAL
+        has_rain = rain > 0
+        has_snow = snow > 0
+        mixed_mask = (has_precipitation & has_rain & has_snow & (p_rain >= MIN_PHASE_SHARE) & (p_snow >= MIN_PHASE_SHARE))
+        rain_mask = (has_precipitation & ~mixed_mask & (rain > snow))
+        snow_mask = (has_precipitation & ~mixed_mask & (snow > rain))
+        rain_only = np.where(rain_mask, total, np.nan)
+        snow_only = np.where(snow_mask, total, np.nan)
+        mixed = np.where(mixed_mask, total, np.nan)
 
         if self.resolution == 2.2:
             sigma = 15
-            lons, lats = rain_gsp.lons.values, rain_gsp.lats.values
+            lons = rain_gsp.lons.values
+            lats = rain_gsp.lats.values
         else:
             sigma = 6
             lons, lats = np.meshgrid(rain_gsp.lons.values, rain_gsp.lats.values)
@@ -621,19 +637,26 @@ class PlotParameter:
         pmsl_sm = gaussian_filter(self.model.pmsl.values, sigma)
         pmsl = pmsl_sm / 100
         pm = self.plot_map.draw_contour(pmsl, self.lats, self.lons, pmsl_levels[self.resolution], 'navy', zorder=20)
-        cr = self.plot_map.draw_contourf(rain_only, lats, lons, phase_levels, cmap_list=cmap_phase['rain'], extend='max', zorder=10)
-        cs = self.plot_map.draw_contourf(snow_only, lats, lons, phase_levels, cmap_list=cmap_phase['snow'], extend='max', zorder=10)
-        cm = self.plot_map.draw_contourf(mixed, lats, lons, phase_levels, cmap_list=cmap_phase['mixed'], extend='max', zorder=10)
-        cfs = {'rain': cr, 'snow': cs, 'mixed': cm}
+        cr = self.plot_map.draw_contourf(rain_only, lats, lons, phase_levels, cmap_list=cmap_phase['rain'],
+                                         extend='both', zorder=10)
+        cs = self.plot_map.draw_contourf(snow_only, lats, lons, phase_levels, cmap_list=cmap_phase['snow'],
+                                         extend='both', zorder=10)
+        cm = self.plot_map.draw_contourf(mixed, lats, lons, phase_levels, cmap_list=cmap_phase['mixed'],
+                                         extend='both', zorder=10)
+        cfs = {
+            'rain': cr,
+            'snow': cs,
+            'mixed': cm
+        }
 
         for label in pm.labelTexts:
             label.set_zorder(30)
 
-        x0 = 0.86  # стартовая позиция первой полосы
-        cbar_width = 0.02  # ширина каждой полосы
-        cbar_height = 0.65  # высота полос
-        cbar_y = 0.17  # нижняя граница полос
-        cbar_pad = 0.06  # расстояние между полосами
+        x0 = 0.86
+        cbar_width = 0.02
+        cbar_height = 0.65
+        cbar_y = 0.17
+        cbar_pad = 0.06
 
         for i, key in enumerate(['rain', 'snow', 'mixed']):
             cbar_cfg = {
@@ -647,10 +670,5 @@ class PlotParameter:
                 "label": phase_labels[key]
             }
 
-            self.plot_map.draw_colorbar(
-                c=cfs[key],
-                cbar=cbar_cfg,
-                levels=phase_levels
-            )
-
+            self.plot_map.draw_colorbar(c=cfs[key], cbar=cbar_cfg, levels=phase_levels)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_phase_{lead_time}")
