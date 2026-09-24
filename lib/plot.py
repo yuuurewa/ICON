@@ -165,14 +165,9 @@ class PlotParameter:
                 tot_prec = np.ma.masked_where(tot_prec < 0.02, tot_prec)
                 lead_time = f"({start_hour}-{end_hour})"
                 self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
-                prec_cmap_obj = ListedColormap(prec_cmap[:-1])
-                prec_cmap_obj.set_under('white')
-                prec_cmap_obj.set_bad('white')
-                prec_cmap_obj.set_over(prec_cmap[-1])
-                prec_norm = mcolors.BoundaryNorm(bounds, prec_cmap_obj.N, clip=False)
-                c = self.plot_map.ax.pcolormesh(self.lons, self.lats, tot_prec, cmap=prec_cmap_obj, norm=prec_norm,
-                                                shading="auto", transform=ccrs.PlateCarree())
-                self.plot_map.draw_colorbar(c, cbar, bounds, extend='both')
+                c = self.plot_map.draw_contourf(tot_prec, self.lats, self.lons, bounds,
+                                           cmap_list=prec_cmap, extend='both')
+                self.plot_map.draw_colorbar(c, cbar, bounds)
                 if hours_step == 24:
                     self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_prec_{end_hour+1:03d}")
                 else:
