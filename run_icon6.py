@@ -21,11 +21,10 @@ DATA_DIR, IMAGE_DIR, _ = set_paths(NAME, resolution, date)
 
 resolution = float(resolution) / 10
 
-
-parameters = [("precipitation", None), ("wind_gust", None), ("dbz", None), ("t2m", None), ("rh2m", None), ("dp2m", None),
-("vis", None),]
+parameters = [("precipitation", None), ("wind_gust", None), ("dbz", None), ("t2m", None), ("rh2m", None),
+              ("dp2m", None), ("vis", None), ("h_snow_it", None), ]
 levels = [300, 500, 700, 850, 925, 1000]
-parameters_agg = ("gust_max", "precip_sum")
+parameters_agg = ("gust_max", "precip_sum", "h_snow_sum", )
 
 
 def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minutes):
@@ -38,7 +37,7 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
     for lead_time_min in model_fileset(fc_start_minutes, fc_end_minutes, data_step_minutes):
         fc_time = model_time + timedelta(minutes=lead_time_min)
         fc_time = fc_time.strftime("%d.%m.%Y %H UTC")
-        lead_time = f"{lead_time_min//60:03d}"
+        lead_time = f"{lead_time_min // 60:03d}"
 
         with ProcessPoolExecutor(len(parameters)) as executor:
             futures = []
@@ -50,7 +49,7 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
 
             for level in levels:
                 plot.def_map(Map6kmKz(IMAGE_DIR, date, "icon6"))
-                
+
                 if level != 1000:
                     futures.append(executor.submit(plot.t_level, fc_time, lead_time, level))
 
@@ -103,6 +102,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
 

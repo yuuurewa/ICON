@@ -667,3 +667,62 @@ class PlotParameter:
 
             self.plot_map.draw_colorbar(c=cfs[key], cbar=cbar_cfg, levels=phase_levels)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_phase_{lead_time}")
+
+    def h_snow_sum(self, hours_step: int = 24) -> None:
+        description = f"Прирост снежного покрова за предыдущие {hours_step} ч"
+        # title = f"{description} за {hours_step} часа(ов){self.title}"
+        cbar = cbar_full[self.resolution]
+        cbar["label"] = f"Высота снежного покрова за {hours_step} ч., cм"
+        if hours_step == 24:
+            hours = self.aggregation_hours
+        else:
+            hours = self.half_aggregation_hours
+        start_hour = hours[0]
+        end_hours = hours[1:]
+        tot_snow_previous = np.zeros(self.lats.shape)
+        for end_hour in end_hours:
+            for _ in model_fileset(start_hour * 60, end_hour * 60, hours_step * 60):
+                tot_snow_previous = gaussian_filter(self.model.h_snow.values*100, 1)
+            for lead_time_minutes in model_fileset(end_hour * 60, end_hour * 60 + 1, 60):
+                tot_snow = gaussian_filter(self.model.h_snow.values*100, 1) - tot_snow_previous
+                tot_snow_previous = gaussian_filter(self.model.h_snow.values*100, 1)
+                # model_time = initial_time(self.model.time.values)
+                fc_time = self.model_time + timedelta(minutes=lead_time_minutes)
+                fc_time = fc_time.strftime("%d.%m.%Y %H UTC")
+                # title_fc = f"{fc_time}, {title} +({start_hour}-{end_hour})ч"
+                tot_snow = np.ma.masked_where(tot_snow < 0.1, tot_snow)
+                lead_time = f"({start_hour}-{end_hour})"
+                self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
+                snow_cmap = ListedColormap(snow_colors[:-1])
+                snow_cmap.set_under('white')
+                snow_cmap.set_over(snow_colors[-1])
+                snow_norm = mcolors.BoundaryNorm(snow_bounds, snow_cmap.N)
+                c = self.plot_map.ax.pcolormesh(self.lons, self.lats, tot_snow, cmap=snow_cmap, norm=snow_norm,
+                                                shading="auto", transform=ccrs.PlateCarree())
+                ch = self.plot_map.draw_colorbar(c, cbar, snow_bounds, extend="both")
+                ch.ax.yaxis.set_major_formatter(FuncFormatter(
+                        lambda value, pos: "0.1"
+                        if np.isclose(value, 0.1)
+                        else f"{value:.0f}"))
+                if hours_step == 24:
+                    self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_snow_{end_hour + 1:03d}")
+                else:
+                    self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_snow_{end_hour:03d}")
+                start_hour = end_hour
+
+    def h_snow_it(self, fc_time, lead_time) -> None:
+        description = "Снежный покров"
+        cbar = cbar_full[self.resolution]
+        cbar["label"] = "Высота снежного покрова, cм"
+        tot_snow = gaussian_filter(self.model.h_snow.values * 100, 1)
+        tot_snow = np.ma.masked_where(tot_snow < 0.1, tot_snow)
+        self.plot_map.create(self.text_left, self.text_right, description, fc_time, lead_time, self.resolution)
+        snow_cmap = ListedColormap(snow_colors[:-1])
+        snow_cmap.set_bad("white")
+        snow_cmap.set_under("white")
+        snow_cmap.set_over(snow_colors[-1])
+        snow_norm = mcolors.BoundaryNorm(h_snow_bounds, ncolors=snow_cmap.N, clip=False)
+        c = self.plot_map.ax.pcolormesh(self.lons, self.lats, tot_snow, cmap=snow_cmap, norm=snow_norm,
+                                        shading="auto", transform=ccrs.PlateCarree())
+        self.plot_map.draw_colorbar(c, cbar, h_snow_bounds, extend="both")
+        self.plot_map.save(f"{self.model.name}_{self.resolution}_h_snow_{lead_time}")
