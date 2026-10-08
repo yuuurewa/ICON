@@ -49,6 +49,7 @@ GRID_CONFIG = {
 }
 
 C_MAP = {"HSURF": 0}
+TP_MAP = {"TP": 13}
 CCL_IDS = (260257, 500098)
 H_ID = 3008
 LAYERS = 65
@@ -149,9 +150,9 @@ def read_file_point(grib_file, msg_map, idx):
     return result
 
 
-def load_series(path, prefix, suffix, msg_map, idx, nx, hours=49, is_prec=False, y=None, x=None, ny=None):
-    hours_list = range(hours)
-    num_files = hours
+def load_series(path, prefix, suffix, msg_map, idx, nx, hours=49, step=1, is_prec=False, y=None, x=None, ny=None):
+    hours_list = range(0, hours, step)
+    num_files = len(hours_list)
 
     if is_prec:
         series = []
@@ -251,15 +252,16 @@ def px(x, y, w, h):
 
 def setup_axes(fig):
     pos = {
-        "header": (274, 2322, 3016, 158),
-        "wind": (274, 1908, 3014, 416),
-        "temp": (274, 1608, 3014, 300),
-        "cloud": (274, 1111, 3014, 416),
-        "vngo": (274, 1041, 3014, 70),
-        "press": (274, 671, 3014, 370),
-        "wind10m": (274, 580, 3014, 92),
-        "ground": (274, 210, 3014, 370),
-        "legend": (274, 110, 3014, 140),
+        "header": (274, 2322, 3030, 158),
+        "wind": (274, 1908, 3025, 416),
+        "temp": (274, 1608, 3025, 300),
+        "cloud": (274, 1111, 3025, 416),
+        "vngo": (274, 1041, 3025, 70),
+        "press": (274, 671, 3025, 370),
+        "wind10m": (274, 580, 3025, 92),
+        "ground": (274, 230, 3025, 350),
+        "prec": (274, 180, 3025, 50),
+        "legend": (274, 80, 3025, 140),
     }
     axes = {}
     for name, p in pos.items():
@@ -353,6 +355,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     prec_series = load_series(path, "lgfff", config["suffix_s"], config["S_MAP"], idx, nx, is_prec=True,
                               y=y, x=x, ny=ny)
     hsurf = read_file_point(f"{path}/lgfff00000000c.grb", C_MAP, idx)["HSURF"]
+    tp = load_series(path, "lgfff", "s", TP_MAP, idx, nx, step=3)
     ccl_profile, h_profile = load_series(path, "lgfff", "clc", "ccl_h", idx, nx)
 
     time = np.arange(49)
@@ -418,12 +421,12 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
 
     if grid_type == 'ICON_2.2':
         width = 1
-        dx = 0
+        dx = 0.5
     else:
         width = 0.5
-        dx = -0.25
+        dx = 0.25
 
-    for t in range(ccl_profile.shape[0]):
+    for t in range(ccl_profile.shape[0] - 1):
         for z0 in range(12):
             vals = ccl_profile[t][(h_profile[t] / 1000 > z0) & (h_profile[t] / 1000 <= z0 + 1)]
             vals = vals[vals >= 5]
@@ -436,7 +439,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         htop_con = clean_cloud(series_s["htop_con"]) - hsurf
         hbas_con_km = hbas_con / 1000
         htop_con_km = htop_con / 1000
-        ax.bar(time + 0.25, (htop_con_km - hbas_con_km),
+        ax.bar(time + 0.75, (htop_con_km - hbas_con_km),
                bottom=hbas_con_km, width=width, facecolor='none', alpha=0.6,
                edgecolor='darkorange', linewidth=1, hatch='\\\\\\\\')
 
@@ -463,12 +466,21 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
             lowest_idx = idx[np.argmin(h_profile[hour, idx])]
             lowest_height[hour] = h_profile[hour, lowest_idx]
 
-    for i, height in enumerate(lowest_height):
+    for i, height in enumerate(lowest_height[:-1]):
         if np.isfinite(height):
+            value = int(round(height / 50) * 50)
+
+            if value == 0:
+                value_text = "<50"
+            elif value == 1000:
+                value_text = "950"
+            else:
+                value_text = str(value)
+
             ax.text(
-                i,
+                i + 0.25,
                 0.5,
-                str(int(round(height / 50) * 50)).replace("1000", "950"),
+                value_text,
                 fontsize=7,
                 ha="center",
                 va="center",
@@ -482,25 +494,93 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         xticklabels=[],
         yticks=[]
     )
+
     # ===== ДАВЛЕНИЕ =====
     ax = axes['press']
-    ax.plot(time, series_s["pmsl"] / 100, 'k', linewidth=1.7)
-    ax.barbs(time, np.full_like(time, 995), 1.94384 * series_s["u10"], 1.94384 * series_s["v10"], length=5,
-             linewidth=0.5, sizes={'spacing': 0.18})
-    major_ticks = np.arange(985, 1041, 10)
-    ax.set(xlim=(-0.5, 48.5), ylim=(985, 1045), xticklabels=[], yticks=major_ticks,
-           yticklabels=[str(t) for t in major_ticks])
-    ax.yaxis.set_minor_locator(FixedLocator(np.arange(990, 1041, 10)))
+
+    pmsl = series_s["pmsl"] / 100
+
+    ax.plot(time, pmsl, 'k', linewidth=1.7)
+
+    idx_min = np.nanargmin(pmsl)
+    idx_max = np.nanargmax(pmsl)
+
+    for idx, value, va, shift in [
+        (idx_max, pmsl[idx_max], "bottom", 2),
+        (idx_min, pmsl[idx_min], "top", -2)
+    ]:
+        ax.text(
+            time[idx],
+            value + shift,
+            f"{value:.0f}",
+            ha="center",
+            va=va,
+            fontsize=8,
+            color="black",
+            bbox=dict(
+                facecolor="white",
+                edgecolor="black",
+                linewidth=1,
+                boxstyle="round,pad=0.25",
+                alpha=0.5
+            ),
+            zorder=20
+        )
+    ax.plot(time[idx_max], pmsl[idx_max], "ko", markersize=2, zorder=21)
+    ax.plot(time[idx_min], pmsl[idx_min], "ko", markersize=2, zorder=21)
+    ax.barbs(
+        time,
+        np.full_like(time, 995),
+        1.94384 * series_s["u10"],
+        1.94384 * series_s["v10"],
+        length=5,
+        linewidth=0.5,
+        sizes={'spacing': 0.18}
+    )
+
+    # Динамический диапазон давления
+    press_min = np.nanmin(pmsl)
+    press_max = np.nanmax(pmsl)
+
+    ymin = np.floor((press_min - 10) / 5) * 5
+    ymax = np.ceil((press_max + 10) / 5) * 5
+
+    major_ticks = np.arange(ymin, ymax + 1, 10, dtype=int)
+    minor_ticks = np.arange(ymin + 5, ymax, 10)
+
+    ax.set(
+        xlim=(-0.5, 48.5),
+        ylim=(ymin, ymax),
+        xticklabels=[],
+        yticks=major_ticks,
+        yticklabels=[str(t) for t in major_ticks]
+    )
+
+    ax.yaxis.set_minor_locator(FixedLocator(minor_ticks))
     ax.tick_params(axis='y', which='major', length=6)
     ax.tick_params(axis='y', which='minor', length=3)
     ax.tick_params(axis='y', labelsize=8)
-    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='k', alpha=0.8)
 
+    ax.grid(
+        which='major',
+        axis='y',
+        linestyle='--',
+        linewidth=0.5,
+        color='k',
+        alpha=0.8
+    )
+
+    # Правая ось
     ax_press_right = ax.twinx()
-    ax_press_right.set_ylim(985, 1045)
+
+    ax_press_right.set_ylim(ymin, ymax)
     ax_press_right.set_yticks(major_ticks)
     ax_press_right.set_yticklabels([str(t) for t in major_ticks])
-    ax_press_right.yaxis.set_minor_locator(FixedLocator(np.arange(990, 1041, 10)))
+
+    ax_press_right.yaxis.set_minor_locator(
+        FixedLocator(np.arange(ymin, ymax + 1, 10))
+    )
+
     ax_press_right.tick_params(axis='y', which='major', length=6)
     ax_press_right.tick_params(axis='y', which='minor', length=3)
     ax_press_right.tick_params(axis='y', labelsize=8)
@@ -526,26 +606,26 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     tprec_plot = np.where(np.round(tprec, 1) < 0.1, np.nan, tprec)
     tprec_clipped = np.clip(tprec_plot, None, 15)  # None = нет минимума
 
-    bars = ax.bar(time, tprec_clipped, width=1, color="green", alpha=0.8,
+    bars = ax.bar(time+0.5, tprec_clipped, width=1, color="green", alpha=0.8,
                   edgecolor='k', linewidth=0.5, zorder=3)
 
     snow = compute_tprec(series_s["snow_gsp"] + series_s["snow_con"])
     snow = np.where(np.round(snow, 1) < 0.1, np.nan, snow)
     snow_clipped = np.clip(snow, None, 15)
 
-    ax.bar(time, snow_clipped, width=1, color="blue", alpha=0.8, zorder=4)
+    ax.bar(time+0.5, snow_clipped, width=1, color="blue", alpha=0.8, zorder=4)
 
-    for prec_bar, prec_val in zip(bars, tprec_plot):
-        if not np.isnan(prec_val):
-            ax.text(prec_bar.get_x() + prec_bar.get_width() / 2, 17.5, f"{prec_val:.1f}",
-                    ha="center", va="bottom", fontsize=7, color="black", style='italic')
+    # for prec_bar, prec_val in zip(bars[:-1], tprec_plot[:-1]):
+    #     if not np.isnan(prec_val):
+    #         ax.text(prec_bar.get_x() + prec_bar.get_width() / 2, 17.5, f"{prec_val:.1f}",
+    #                 ha="center", va="bottom", fontsize=7, color="black", style='italic')
 
     ax1 = ax.twinx()
 
     t2m = series_s["t2m"] - 273
     td2m = series_s["td2m"] - 273
 
-    ax1.plot(time, t2m, "r", zorder=10)
+    ax1.plot(time, t2m, "r", marker=".", markersize=4, zorder=10)
     ax1.plot(time, td2m, "g--", zorder=5)
 
     temp_min = np.nanmin([t2m.min(), td2m.min()])
@@ -577,13 +657,55 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
                                       ([i for i, h in values if 12 <= h < 24], 'blue', -3)]:
             if len(period) >= 2:
                 idx_val = period[np.argmax(t2m[period])] if color == 'red' else period[np.argmin(t2m[period])]
-                dx = 0.5 if idx_val == period[0] else (-0.5 if idx_val == period[-1] else 0)
+                dx = 0.25 if idx_val == 0 else (-0.25 if idx_val == 47 else 0)
                 x_pos = idx_val + dx
                 ax1.text(x_pos, t2m[idx_val] + offset, f"{t2m[idx_val]:.1f}",
                         ha="center", va="bottom" if color == 'red' else "top",
                         fontsize=8, color=color,
                         bbox=dict(boxstyle="round,pad=0.25", facecolor="white",
                                   edgecolor=color, alpha=0.5, linewidth=1), zorder=7)
+    # ===== ОСАДКИ 3Ч =====
+    ax = axes['prec']
+
+    # Осадки за 3 часа
+    tprec_3h = np.array([
+        np.nansum(tprec[i:i + 3])
+        for i in range(0, len(tprec) - 2, 3)
+    ])
+
+    # Осадки за фиксированные 12-часовые интервалы
+    tprec_12h = np.array([
+        np.nansum(tprec_3h[i:i + 4])
+        for i in range(0, len(tprec_3h), 4)
+    ])
+
+    for i, p3 in enumerate(tprec_3h):
+        if np.round(p3, 1) < 0.1:
+            continue
+        else:
+            x = (i * 3) + 1.5
+            print(x)
+            # 3 часа
+            ax.text(
+                x,
+                0.15,
+                f"{p3:.1f}",
+                fontsize=7,
+                ha="center",
+                va="bottom",
+                color="black",
+                fontstyle="italic"
+            )
+
+    ax.set(
+        xlim=(-0.5, 48.5),
+        xticks=ticks_3h,
+        xticklabels=[],
+        ylim=(0, 1),
+        yticks=[]
+    )
+    # for x in ticks_3h:
+    #     ax.axvline(x=x, color='k', linestyle='--', linewidth=0.5, alpha=0.7)
 
     # ===== ОКРЕСТНОСТЬ =====
     ax = axes['legend']
@@ -593,29 +715,29 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     size = 1
     cell = size / 3
 
-    for h in range(tprec_ser.shape[0]):
-        x0 = h - 0.5
-        x1 = h + 0.5
+    for h in range(tprec_ser.shape[0]-1):
+        x0 = h
+        x1 = h + 1
         ax.imshow(tprec_ser[h], cmap=cmap_prec, norm=norm_prec, interpolation="none", origin="upper",
                   extent=[x0, x1, size, 0])
 
-    ax.set_xlim(-0.5, 48.5)
+    ax.set_xlim(-0.5, 49.5)
     ax.set_xticks(ticks_3h)
 
     for h in range(tprec_ser.shape[0]):
         x0 = h - 0.5
         x1 = h + 0.5
         for i in range(4):
-            ax.axvline(x0 + i * cell, color="black", linewidth=0.5, alpha=0.5)
-            ax.hlines(y=i * cell, xmin=x0, xmax=x1, color="black", linewidth=0.2, alpha=0.5)
+            ax.axvline(x0 + i * cell + 0.5, color="black", linewidth=0.5, alpha=0.5)
+            ax.hlines(y=i * cell , xmin=x0, xmax=x1, color="black", linewidth=0.2, alpha=0.5)
 
     ax.set_xticks(np.arange(0, 49, 1), minor=True)
 
     # ===== ФИНАЛЬНАЯ НАСТРОЙКА =====
-    setup_common_axes([axes['cloud'], axes['ground'], axes['wind'], axes['temp'], axes['press'], axes['legend']],
+    setup_common_axes([axes['cloud'], axes['ground'], axes['wind'], axes['temp'], axes['press'], axes['legend'], axes['prec']],
                       start_date, ticks_3h)
     axes['legend'].xaxis.grid(False)
-    for name in ['wind', 'ground', 'cloud', 'press', 'wind10m']:
+    for name in ['wind', 'ground', 'cloud', 'press', 'wind10m', 'prec']:
         axes[name].tick_params(bottom=False, top=False, labelbottom=False)
     fig.text(1, 0, "©СибНИГМИ", ha="right", va="bottom", fontsize=10, zorder=60)
 
@@ -720,10 +842,10 @@ def run_from_config(path, conf_file='config_with_grids.json'):
 
 if __name__ == "__main__":
     # Вариант 1: Запуск из конфигурационного файла
-    path = Path(__file__).resolve().parent
-    run_from_config(path)
-    exit(0)
+    # path = Path(__file__).resolve().parent
+    # run_from_config(path)
+    # exit(0)
 
     # Вариант 2: Запуск для одной станции (для отладки)
-    #draw_meteogram('/home/vika/icon1707', 52.766, 87.826, 'Таштагол', '')
+    draw_meteogram('/home/vika/270900', 67.481, 78.733, 'Тазовский', '', output_dir='/home/vika')
     # draw_meteogram('/home/vika/icon071718kz', 54.973, 82.891, 'Новосибирск', '')

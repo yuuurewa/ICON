@@ -185,26 +185,26 @@ class BasePlot:
         if type == 'm':
             name = f"{name}.png"
             filename = os.path.join(self.path, name)
-            self.fig.savefig(filename, dpi=100)
+            self.fig.savefig(filename, format="png", dpi=200,
+                pil_kwargs={
+                    "quality": 85,
+                    "optimize": True,
+                    "progressive": True
+                })
         else:
-            name = f"{name}hour.png"
+            name = f"{name}hour.jpg"
             filename = os.path.join(self.path, name)
             self.ax.text(1, 0, "©СибНИГМИ", transform=self.ax.transAxes, ha="right", va="bottom", fontsize=11,
                          zorder=60)
             # if image_type == "tiff":
             #     self.fig.savefig('{}.tiff'.format(filename), dpi=650, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
             # else:
-            self.fig.savefig(
-                filename,
-                format="jpg",
-                dpi=110,
-                bbox_inches='tight',
+            self.fig.savefig(filename, format="jpg", dpi=200, bbox_inches='tight',
                 pil_kwargs={
                     "quality": 85,
                     "optimize": True,
                     "progressive": True
-                }
-            )
+                })
             #self.fig.savefig(filename, dpi=300, bbox_inches='tight')
 
         plt.cla()
