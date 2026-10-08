@@ -35,7 +35,7 @@ class BasePlot:
             self.ax.set_extent(self.extent)
         self.ax.tick_params(right=False)
 
-        states = cf.ShapelyFeature(Reader('./RUS_adm/RUS_adm1.shp').geometries(),
+        states = cf.ShapelyFeature(Reader('./Adm_bound/Administrative_boundaries.shp').geometries(),
                                    self.transform, edgecolor='black', facecolor='none')
         self.ax.add_feature(states, linewidth=.5)
 
@@ -54,7 +54,7 @@ class BasePlot:
                 alignment = 'left'
             self.ax.plot(c['lon'], c['lat'], marker='o', color='red', markersize=3, alpha=1,
                      transform=self.transform, zorder=40)  # transform=crs.Geodetic())
-            self.ax.text(c['lon'], c['lat'] + 0.07, c['name'],
+            self.ax.text(c['lon'], c['lat'] + 0.2, c['name'],
                      horizontalalignment=alignment,
                      transform=self.transform, zorder=50)  # transform=crs.Geodetic())
 
@@ -314,5 +314,7 @@ class Map6kmKz(BasePlot):
         {"name": "Кемерово", "lat": 55.2, "lon": 86.04},
         {"name": "Новосибирск", "lat": 55.02, "lon": 82.8},
         {"name": "Омск", "lat": 54.58, "lon": 73.23},
-        {"name": "Томск", "lat": 56.29, "lon": 84.57}
+        {"name": "Томск", "lat": 56.29, "lon": 84.57},
+        {"name": "Астана", "lat": 51.13, "lon": 71.43},
+        {"name": "Улан-Батор", "lat": 47.92, "lon": 106.92},
     )
