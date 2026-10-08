@@ -842,10 +842,10 @@ def run_from_config(path, conf_file='config_with_grids.json'):
 
 if __name__ == "__main__":
     # Вариант 1: Запуск из конфигурационного файла
-    # path = Path(__file__).resolve().parent
-    # run_from_config(path)
-    # exit(0)
+    path = Path(__file__).resolve().parent
+    run_from_config(path)
+    exit(0)
 
     # Вариант 2: Запуск для одной станции (для отладки)
-    draw_meteogram('/home/vika/270900', 67.481, 78.733, 'Тазовский', '', output_dir='/home/vika')
+    # draw_meteogram('/home/vika/270900', 67.481, 78.733, 'Тазовский', '', output_dir='/home/vika')
     # draw_meteogram('/home/vika/icon071718kz', 54.973, 82.891, 'Новосибирск', '')
