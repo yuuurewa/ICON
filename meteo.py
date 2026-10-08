@@ -528,15 +528,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         )
     ax.plot(time[idx_max], pmsl[idx_max], "ko", markersize=2, zorder=21)
     ax.plot(time[idx_min], pmsl[idx_min], "ko", markersize=2, zorder=21)
-    ax.barbs(
-        time,
-        np.full_like(time, 995),
-        1.94384 * series_s["u10"],
-        1.94384 * series_s["v10"],
-        length=5,
-        linewidth=0.5,
-        sizes={'spacing': 0.18}
-    )
+
 
     # Динамический диапазон давления
     press_min = np.nanmin(pmsl)
@@ -545,41 +537,36 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     ymin = np.floor((press_min - 10) / 5) * 5
     ymax = np.ceil((press_max + 10) / 5) * 5
 
-    major_ticks = np.arange(ymin, ymax + 1, 10, dtype=int)
-    minor_ticks = np.arange(ymin + 5, ymax, 10)
-
-    ax.set(
-        xlim=(-0.5, 48.5),
-        ylim=(ymin, ymax),
-        xticklabels=[],
-        yticks=major_ticks,
-        yticklabels=[str(t) for t in major_ticks]
+    ax.barbs(
+        time,
+        np.full_like(time, ymin),
+        1.94384 * series_s["u10"],
+        1.94384 * series_s["v10"],
+        length=5,
+        linewidth=0.5,
+        sizes={'spacing': 0.18}
     )
+
+    major_ticks = np.arange(ymin - 10, ymax + 1, 10, dtype=int)
+    minor_ticks = np.arange(ymin - 5, ymax, 10)
+
+    ax.set(xlim=(-0.5, 48.5), ylim=(ymin-10, ymax), xticklabels=[], yticks=major_ticks,
+           yticklabels=[str(t) for t in major_ticks])
 
     ax.yaxis.set_minor_locator(FixedLocator(minor_ticks))
     ax.tick_params(axis='y', which='major', length=6)
     ax.tick_params(axis='y', which='minor', length=3)
     ax.tick_params(axis='y', labelsize=8)
 
-    ax.grid(
-        which='major',
-        axis='y',
-        linestyle='--',
-        linewidth=0.5,
-        color='k',
-        alpha=0.8
-    )
+    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='k',alpha=0.8)
 
     # Правая ось
     ax_press_right = ax.twinx()
-
-    ax_press_right.set_ylim(ymin, ymax)
+    ax_press_right.set_ylim(ymin-10, ymax)
     ax_press_right.set_yticks(major_ticks)
     ax_press_right.set_yticklabels([str(t) for t in major_ticks])
 
-    ax_press_right.yaxis.set_minor_locator(
-        FixedLocator(np.arange(ymin, ymax + 1, 10))
-    )
+    ax_press_right.yaxis.set_minor_locator(FixedLocator(np.arange(ymin - 5, ymax + 1, 10)))
 
     ax_press_right.tick_params(axis='y', which='major', length=6)
     ax_press_right.tick_params(axis='y', which='minor', length=3)
