@@ -10,6 +10,7 @@ from matplotlib.cm import get_cmap
 import matplotlib
 matplotlib.use('agg')
 from PIL import Image
+from pathlib import Path
 
 from constants import *
 
@@ -35,7 +36,10 @@ class BasePlot:
             self.ax.set_extent(self.extent)
         self.ax.tick_params(right=False)
 
-        states = cf.ShapelyFeature(Reader('./RUS_adm/RUS_adm1.shp').geometries(),
+        shp_path = Path(__file__).resolve().parent.parent/"Adm_bound"/"Administrative_boundaries.shp"
+
+        states = cf.ShapelyFeature(
+            Reader(str(shp_path)).geometries(),
                                    self.transform, edgecolor='black', facecolor='none')
         self.ax.add_feature(states, linewidth=.5)
 
