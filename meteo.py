@@ -764,7 +764,7 @@ def run_from_config(path, conf_file='config_with_grids.json'):
     print(f"Начинаем генерацию {total} метеограмм")
     print(f"Используется ядер: {min(cpu_count(), len(tasks))}")
 
-    with Pool(processes=1) as pool:
+    with Pool(processes=min(cpu_count(), total)) as pool:
         for i, _ in enumerate(pool.imap_unordered(process_task, tasks), 1):
             if i % max(1, total // 10) == 0 or i == total:
                 elapsed = time.time() - start_time
