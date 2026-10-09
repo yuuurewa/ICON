@@ -509,43 +509,29 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         (idx_max, pmsl[idx_max], "bottom", 2),
         (idx_min, pmsl[idx_min], "top", -2)
     ]:
-        ax.text(
-            time[idx],
-            value + shift,
-            f"{value:.0f}",
-            ha="center",
-            va=va,
-            fontsize=8,
-            color="black",
-            bbox=dict(
+        dx = 0.33 if idx == 0 else (-0.33 if idx == 47 else 0)
+        x_pos = idx + dx
+        ax.text(x_pos, value + shift, f"{value:.0f}",  ha="center", va=va, fontsize=8, color="black",
+                bbox=dict(
                 facecolor="white",
                 edgecolor="black",
                 linewidth=1,
                 boxstyle="round,pad=0.25",
                 alpha=0.5
             ),
-            zorder=20
-        )
+            zorder=20)
+
     ax.plot(time[idx_max], pmsl[idx_max], "ko", markersize=2, zorder=21)
     ax.plot(time[idx_min], pmsl[idx_min], "ko", markersize=2, zorder=21)
 
-
-    # Динамический диапазон давления
     press_min = np.nanmin(pmsl)
     press_max = np.nanmax(pmsl)
 
     ymin = np.floor((press_min - 10) / 5) * 5
     ymax = np.ceil((press_max + 10) / 5) * 5
 
-    ax.barbs(
-        time,
-        np.full_like(time, ymin),
-        1.94384 * series_s["u10"],
-        1.94384 * series_s["v10"],
-        length=5,
-        linewidth=0.5,
-        sizes={'spacing': 0.18}
-    )
+    ax.barbs(time, np.full_like(time, ymin), 1.94384 * series_s["u10"], 1.94384 * series_s["v10"], length=5,
+             linewidth=0.5, sizes={'spacing': 0.18})
 
     major_ticks = np.arange(ymin - 10, ymax + 1, 10, dtype=int)
     minor_ticks = np.arange(ymin - 5, ymax, 10)
@@ -591,9 +577,9 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
 
     tprec = compute_tprec(series_s["totprec"])
     tprec_plot = np.where(np.round(tprec, 1) < 0.1, np.nan, tprec)
-    tprec_clipped = np.clip(tprec_plot, None, 15)  # None = нет минимума
+    tprec_clipped = np.clip(tprec_plot, None, 15)
 
-    bars = ax.bar(time+0.5, tprec_clipped, width=1, color="green", alpha=0.8,
+    ax.bar(time+0.5, tprec_clipped, width=1, color="green", alpha=0.8,
                   edgecolor='k', linewidth=0.5, zorder=3)
 
     snow = compute_tprec(series_s["snow_gsp"] + series_s["snow_con"])
@@ -601,11 +587,6 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
     snow_clipped = np.clip(snow, None, 15)
 
     ax.bar(time+0.5, snow_clipped, width=1, color="blue", alpha=0.8, zorder=4)
-
-    # for prec_bar, prec_val in zip(bars[:-1], tprec_plot[:-1]):
-    #     if not np.isnan(prec_val):
-    #         ax.text(prec_bar.get_x() + prec_bar.get_width() / 2, 17.5, f"{prec_val:.1f}",
-    #                 ha="center", va="bottom", fontsize=7, color="black", style='italic')
 
     ax1 = ax.twinx()
 
@@ -653,46 +634,16 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
                                   edgecolor=color, alpha=0.5, linewidth=1), zorder=7)
     # ===== ОСАДКИ 3Ч =====
     ax = axes['prec']
-
-    # Осадки за 3 часа
-    tprec_3h = np.array([
-        np.nansum(tprec[i:i + 3])
-        for i in range(0, len(tprec) - 2, 3)
-    ])
-
-    # Осадки за фиксированные 12-часовые интервалы
-    tprec_12h = np.array([
-        np.nansum(tprec_3h[i:i + 4])
-        for i in range(0, len(tprec_3h), 4)
-    ])
+    tprec_3h = np.array([np.nansum(tprec[i:i + 3])
+        for i in range(0, len(tprec) - 2, 3)])
 
     for i, p3 in enumerate(tprec_3h):
         if np.round(p3, 1) < 0.1:
             continue
         else:
             x = (i * 3) + 1.5
-            print(x)
-            # 3 часа
-            ax.text(
-                x,
-                0.15,
-                f"{p3:.1f}",
-                fontsize=7,
-                ha="center",
-                va="bottom",
-                color="black",
-                fontstyle="italic"
-            )
-
-    ax.set(
-        xlim=(-0.5, 48.5),
-        xticks=ticks_3h,
-        xticklabels=[],
-        ylim=(0, 1),
-        yticks=[]
-    )
-    # for x in ticks_3h:
-    #     ax.axvline(x=x, color='k', linestyle='--', linewidth=0.5, alpha=0.7)
+            ax.text(x, 0.15, f"{p3:.1f}", fontsize=7, ha="center", va="bottom", color="black", fontstyle="italic")
+    ax.set(xlim=(-0.5, 48.5), xticks=ticks_3h, xticklabels=[], ylim=(0, 1), yticks=[])
 
     # ===== ОКРЕСТНОСТЬ =====
     ax = axes['legend']
@@ -813,7 +764,7 @@ def run_from_config(path, conf_file='config_with_grids.json'):
     print(f"Начинаем генерацию {total} метеограмм")
     print(f"Используется ядер: {min(cpu_count(), len(tasks))}")
 
-    with Pool(processes=min(cpu_count(), total)) as pool:
+    with Pool(processes=1) as pool:
         for i, _ in enumerate(pool.imap_unordered(process_task, tasks), 1):
             if i % max(1, total // 10) == 0 or i == total:
                 elapsed = time.time() - start_time

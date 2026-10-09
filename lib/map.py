@@ -35,7 +35,7 @@ class BasePlot:
             self.ax.set_extent(self.extent)
         self.ax.tick_params(right=False)
 
-        states = cf.ShapelyFeature(Reader('./Adm_bound/Administrative_boundaries.shp').geometries(),
+        states = cf.ShapelyFeature(Reader('./RUS_adm/RUS_adm1.shp').geometries(),
                                    self.transform, edgecolor='black', facecolor='none')
         self.ax.add_feature(states, linewidth=.5)
 
