@@ -509,7 +509,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         (idx_max, pmsl[idx_max], "bottom", 2),
         (idx_min, pmsl[idx_min], "top", -2)
     ]:
-        dx = 0.33 if idx == 0 else (-0.33 if idx == 47 else 0)
+        dx = 0.5 if idx == 0 else (-0.5 if idx == 48 else 0)
         x_pos = idx + dx
         ax.text(x_pos, value + shift, f"{value:.0f}",  ha="center", va=va, fontsize=8, color="black",
                 bbox=dict(
@@ -625,7 +625,7 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
                                       ([i for i, h in values if 12 <= h < 24], 'blue', -3)]:
             if len(period) >= 2:
                 idx_val = period[np.argmax(t2m[period])] if color == 'red' else period[np.argmin(t2m[period])]
-                dx = 0.25 if idx_val == 0 else (-0.25 if idx_val == 47 else 0)
+                dx = 0.25 if idx_val == 0 else (-0.25 if idx_val == 48 else 0)
                 x_pos = idx_val + dx
                 ax1.text(x_pos, t2m[idx_val] + offset, f"{t2m[idx_val]:.1f}",
                         ha="center", va="bottom" if color == 'red' else "top",
@@ -786,4 +786,4 @@ if __name__ == "__main__":
 
     # Вариант 2: Запуск для одной станции (для отладки)
     # draw_meteogram('/home/vika/270900', 67.481, 78.733, 'Тазовский', '', output_dir='/home/vika')
-    # draw_meteogram('/home/vika/icon071718kz', 54.973, 82.891, 'Новосибирск', '')
+    # draw_meteogram('/home/vika/icon2218', 52.55, 85.224, 'Бийск', '')
