@@ -75,15 +75,22 @@ class BasePlot:
             f_height = 0.93
             s_height = 0.89
 
-        if right_pos==None:
-            right_pos=0.97
+        if right_pos == None:
+            right_pos = 0.97
         else:
-            right_pos=right_pos
+            right_pos = right_pos
 
-        self.fig.text(0.5, f_height, description, ha='center', va='top', fontsize=13)
-        self.fig.text(0.5, s_height, fc_time, ha='center', va='top', fontsize=12)
-        self.fig.text(0.05, f_height, text_left, ha='left', va='top', fontsize=10)
-        self.fig.text(right_pos, f_height, f'{text_right} +{lead_time}', ha='right', va='top', fontsize=10)
+        if isinstance(self, Map6kmES):
+            s_height = 0.895
+            self.fig.text(0.5, f_height, description, ha='center', va='top', fontsize=14)
+            self.fig.text(0.5, s_height, fc_time, ha='center', va='top', fontsize=12)
+            self.fig.text(0.05, f_height, text_left, ha='left', va='top', fontsize=11)
+            self.fig.text(right_pos, f_height, f'{text_right} +{lead_time}', ha='right', va='top', fontsize=11)
+        else:
+            self.fig.text(0.5, f_height, description, ha='center', va='top', fontsize=13)
+            self.fig.text(0.5, s_height, fc_time, ha='center', va='top', fontsize=12)
+            self.fig.text(0.05, f_height, text_left, ha='left', va='top', fontsize=10)
+            self.fig.text(right_pos, f_height, f'{text_right} +{lead_time}', ha='right', va='top', fontsize=10)
 
     def add_cfeature(self, feature):
         self.ax.add_feature(feature, alpha=0.7, edgecolor='royalblue', linewidth=1.5)
@@ -322,3 +329,48 @@ class Map6kmKz(BasePlot):
         {"name": "Астана", "lat": 51.13, "lon": 71.43},
         {"name": "Улан-Батор", "lat": 47.92, "lon": 106.92},
     )
+
+
+class Map6kmES(BasePlot):
+
+    extent = (90, 122, 40, 74.5)
+    proj = crs.Miller(central_longitude=78)
+    cent_lat = 80
+    cent_lon = 78
+    # proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
+    figsize = (12, 16)
+    cities = (
+        {"name": "Тура", "lat": 64.276, "lon": 100.198},
+        {"name": "Красноярск", "lat": 56.008, "lon": 92.87},
+        {"name": "Абакан", "lat": 53.720, "lon": 91.442},
+        {"name": "Кызыл", "lat": 51.719, "lon": 94.437},
+        {"name": "Иркутск", "lat": 52.286, "lon": 104.280},
+        {"name": "Чита", "lat": 52.034, "lon": 113.499},
+        {"name": "Улан-Батор", "lat": 47.92, "lon": 106.92},
+    )
+
+
+# class Map6kmWS(BasePlot):
+#
+#     extent = (70, 108, 40, 74)
+#     proj = crs.Miller(central_longitude=78)
+#     cent_lat = 80
+#     cent_lon = 78
+#     # proj = crs.NearsidePerspective(central_latitude=cent_lat, central_longitude=cent_lon)
+#     figsize = (14, 9)
+#     cities = (
+#         {"name": "Норильск", "lat": 69.349, "lon": 88.201},
+#         {"name": "Тура", "lat": 64.276, "lon": 100.198},
+#         {"name": "Красноярск", "lat": 56.008, "lon": 92.87},
+#         {"name": "Абакан", "lat": 53.720, "lon": 91.442},
+#         {"name": "Кызыл", "lat": 51.719, "lon": 94.437},
+#         {"name": "Иркутск", "lat": 52.286, "lon": 104.280},
+#         {"name": "Барнаул", "lat": 53.21, "lon": 83.47},
+#         {"name": "Горно-Алтайск", "lat": 51.57, "lon": 85.58},
+#         {"name": "Кемерово", "lat": 55.2, "lon": 86.04},
+#         {"name": "Новосибирск", "lat": 55.02, "lon": 82.8},
+#         {"name": "Омск", "lat": 54.58, "lon": 73.23},
+#         {"name": "Томск", "lat": 56.29, "lon": 84.57},
+#         {"name": "Астана", "lat": 51.13, "lon": 71.43},
+#         {"name": "Улан-Батор", "lat": 47.92, "lon": 106.92},
+#     )
