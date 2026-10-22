@@ -688,6 +688,10 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         region = 'Кр. край'
     elif lat == 51.1 and lon == 114.517:
         region = 'Заб. край'
+    elif lat == 55.95 and lon == 92.3:
+        region = 'Кр. край'
+    elif lat == 55.233 and lon == 63.317:
+        region = 'Кург. обл.'
     else:
         region=None
 
