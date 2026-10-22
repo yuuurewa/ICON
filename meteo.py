@@ -281,8 +281,10 @@ def setup_header(ax, start_date, grid_type, station_name, header_coords):
     ax.plot([0.3, 0.3], [0.5, 1], 'k', lw=1)
     ax.plot([0.7, 0.7], [0.5, 1], 'k', lw=1)
     ax.plot([0, 1], [0.5, 0.5], 'k', lw=1)
-
-    ax.text(0.15, 0.75, f"{header_coords}", ha="center", va="center")
+    if station_name == 'Ельцовка':
+        ax.text(0.15, 0.75, "", ha="center", va="center")
+    else:
+        ax.text(0.15, 0.75, f"{header_coords}", ha="center", va="center")
     ax.text(0.5, 0.75, station_name, ha="center", va="center")
 
     if grid_type == "ICON_2.2":
