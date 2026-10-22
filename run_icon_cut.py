@@ -6,16 +6,18 @@ from pathlib import Path
 from helpers import set_paths, initial_time
 from lib.cosmo import ComputedModelData, select_path, model_fileset
 from lib.plot import PlotParameter
-from lib.map import Map6kmES, Map6kmWS
+from lib.map import Map6kmES
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from constants import *
 
 NAME = "ICON"
 resolution = "066"
 
-date = "2026092700"
-DATA_DIR = "/home/vika/P/RuSib6Kz"
-IMAGE_DIR = f"/home/vika/icon-maps/test_local6_6"
+if os.environ.get('HOSTNAME') == "xfront2" and sys.argv[1]:
+    date = sys.argv[1]
+else:
+    date = "2024071100"
+DATA_DIR, IMAGE_DIR, _ = set_paths(NAME, resolution, date)
 
 resolution = float(resolution) / 10
 
