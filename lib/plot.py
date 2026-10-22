@@ -559,7 +559,7 @@ class PlotParameter:
         else:
             self.plot_map.save(f"{self.model.name}_{self.resolution}_{level}_{lead_time}")
 
-    def cl_type(self, fc_time, lead_time, type: str, cut) -> None:
+    def cl_type(self, fc_time, lead_time, type: str, cut=None) -> None:
         if type=='hbas_con':
             description = f"Нижняя граница конвективной облачности"
         elif type=='htop_con':
