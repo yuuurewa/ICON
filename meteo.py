@@ -709,8 +709,9 @@ def draw_meteogram(path, lat, lon, station_name, header_coords, output_dir=None,
         output_name = f"M_{grid_type}_{safe_name}"
     # output_path = os.path.join(output_dir, output_name)
     plot_save = BasePlot(output_dir, "", "")
-    plot_save.fig=fig
-    plot_save.save(output_name, type='m')
+    plot_save.fig = fig
+    filename = plot_save.save(output_name, type="m", upload_ftp=False,)
+    return filename
 
 
 GRID_RESOLUTION = {
@@ -723,7 +724,7 @@ def process_task(task):
     station, grid_name, DATA_DIR, M_DIR = task
 
     try:
-        draw_meteogram(
+        filename = draw_meteogram(
             path=DATA_DIR,
             lat=station['lat'],
             lon=station['lon'],
@@ -733,10 +734,13 @@ def process_task(task):
             grid_type=grid_name
         )
 
-        return True, station['Название'], grid_name, None
+        if not filename or not os.path.isfile(filename):
+            return (False, station['Название'], grid_name, "Файл не создан", None)
+
+        return (True, station['Название'], grid_name, None, filename)
 
     except Exception as e:
-        return False, station['Название'], grid_name, str(e)
+        return (False, station['Название'], grid_name, str(e), None)
 
 
 def run_from_config(path, conf_file='config_with_grids.json'):
@@ -765,18 +769,47 @@ def run_from_config(path, conf_file='config_with_grids.json'):
 
             DATA_DIR, _, M_DIR = set_paths("ICON", resolution, date)
             tasks.append((station, grid_name, DATA_DIR, M_DIR))
+    ftp_users = {
+        "ICON_2.2": "icon2",
+        "ICON_6.6": "icon6",
+    }
 
+    remote_dirs = {
+        "ICON_2.2": f"/home/icon2/{date}",
+        "ICON_6.6": f"/home/icon6/{date}",
+    }
     total = len(tasks)
     print(f"Начинаем генерацию {total} метеограмм")
     print(f"Используется ядер: {min(cpu_count(), len(tasks))}")
 
-    with Pool(processes=min(cpu_count(), total)) as pool:
-        for i, _ in enumerate(pool.imap_unordered(process_task, tasks), 1):
-            if i % max(1, total // 10) == 0 or i == total:
-                elapsed = time.time() - start_time
-                percent = i / total * 100
-                print(f"\n\rПрогресс: {i}/{total} ({percent:.1f}%) | Прошло: {elapsed:.1f}с",
-                      end="", flush=True)
+    try:
+        with Pool(processes=min(cpu_count(), total)) as pool:
+            for i, result in enumerate(pool.imap_unordered(process_task, tasks), 1):
+                success, station_name, grid_name, error, filename = result
+
+                if success:
+                    if os.environ.get("HOSTNAME") == "xfront2":
+                        BasePlot.queue_ftp_upload(filename, ftp_users[grid_name], remote_dirs[grid_name],)
+                else:
+                    print(
+                        f"\nОшибка генерации: {station_name} "
+                        f"({grid_name}): {error}"
+                    )
+
+                if i % max(1, total // 10) == 0 or i == total:
+                    elapsed = time.time() - start_time
+                    percent = i / total * 100
+
+                    print(
+                        f"\rПрогресс: {i}/{total} ({percent:.1f}%) "
+                        f"| Прошло: {elapsed:.1f} с",
+                        end="",
+                        flush=True,
+                    )
+
+    finally:
+        if os.environ.get("HOSTNAME") == "xfront2":
+            BasePlot.wait_ftp_uploads()
 
     total_time = time.time() - start_time
     print(f"\nСгенерировано {total} метеограмм")

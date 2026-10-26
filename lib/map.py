@@ -1,4 +1,7 @@
 import ftplib
+import queue
+import threading
+import time
 import os
 
 import cartopy.crs as crs
@@ -20,6 +23,19 @@ plt.rc('font', serif='Helvetica Neue')
 
 
 class BasePlot:
+    _ftp_queue = queue.Queue()
+    _ftp_thread = None
+    _ftp_lock = threading.Lock()
+    _ftp_stop = False
+
+    FTP_HOST = "192.168.9.9"
+
+    FTP_PASSWORDS = {
+        "cosmo_phenom": "atyjvtys",
+        "cosmo_lhn": "gjh5GHF54f",
+        "icon2": "Kmq2026A!0",
+        "icon6": "QzAXb@2026",
+    }
     def __init__(self, path: str, date: str, ftp_user: str) -> None:
         self.path = path
         self.date = date
@@ -192,7 +208,7 @@ class BasePlot:
         file.close()
         session.quit()
 
-    def save(self, name, type=None, image_type=None):
+    def save(self, name, type=None, image_type=None, upload_ftp=True):
         if type == 'm':
             name = f"{name}.png"
             filename = os.path.join(self.path, name)
@@ -223,13 +239,149 @@ class BasePlot:
         plt.close()
 
 
-        if os.environ.get('HOSTNAME') == "xfront2":
+        if upload_ftp and os.environ.get('HOSTNAME') == "xfront2":
             try:
                 self._ftp_send(filename, name)
             except Exception as e:
                 print("FTP transfer failed")
                 print(e)
-                pass
+
+        return filename
+
+    @classmethod
+    def _ftp_worker(cls):
+        while True:
+            task = cls._ftp_queue.get()
+            try:
+                if task is None:
+                    return
+
+                filename, name, ftp_user, remote_dir = task
+                password = cls.FTP_PASSWORDS.get(ftp_user)
+
+                if password is None:
+                    print(f"FTP: неизвестный пользователь {ftp_user}")
+                    continue
+
+                for attempt in range(1, 6):
+                    ftp = None
+                    try:
+                        ftp = ftplib.FTP(timeout=60)
+                        ftp.connect(cls.FTP_HOST)
+                        ftp.login(ftp_user, password)
+                        ftp.set_pasv(True)
+
+                        cls._ftp_makedirs(ftp, remote_dir)
+
+                        if cls._ftp_is_up_to_date(ftp, filename, name):
+                            print(f"FTP: актуальный файл, пропуск {name}")
+                            break
+
+                        with open(filename, "rb") as file:
+                            ftp.storbinary(f"STOR {name}", file)
+
+                        print(f"FTP: отправлен {name}")
+                        break
+
+                    except Exception as exc:
+                        print(
+                            f"FTP: ошибка отправки {name}, "
+                            f"попытка {attempt}/5: {exc}"
+                        )
+
+                        if attempt == 5:
+                            print(f"FTP: окончательная ошибка для {name}")
+                        else:
+                            time.sleep(3 * (1.5 ** (attempt - 1)))
+
+                    finally:
+                        if ftp is not None:
+                            try:
+                                ftp.quit()
+                            except Exception:
+                                ftp.close()
+
+            finally:
+                cls._ftp_queue.task_done()
+
+    @staticmethod
+    def _ftp_makedirs(ftp, remote_dir):
+        path = remote_dir.replace("\\", "/")
+        current = "/" if path.startswith("/") else ""
+
+        for part in path.strip("/").split("/"):
+            if not part:
+                continue
+
+            current = (
+                current.rstrip("/") + "/" + part
+                if current
+                else part
+            )
+
+            try:
+                ftp.cwd(current)
+            except ftplib.error_perm:
+                try:
+                    ftp.mkd(current)
+                except ftplib.error_perm:
+                    pass
+
+                ftp.cwd(current)
+
+    @staticmethod
+    def _ftp_is_up_to_date(ftp, filename, name):
+        try:
+            response = ftp.sendcmd(f"MDTM {name}")
+
+            if not response.startswith("213 "):
+                return False
+
+            remote_time = time.strptime(
+                response[4:18], "%Y%m%d%H%M%S"
+            )
+            remote_timestamp = time.mktime(remote_time) - time.timezone
+
+            return remote_timestamp >= os.path.getmtime(filename)
+
+        except Exception:
+            return False
+
+    @classmethod
+    def queue_ftp_upload(cls, filename, ftp_user, remote_dir):
+        if not os.path.isfile(filename):
+            raise FileNotFoundError(filename)
+
+        with cls._ftp_lock:
+            if cls._ftp_thread is None or not cls._ftp_thread.is_alive():
+                cls._ftp_thread = threading.Thread(
+                    target=cls._ftp_worker,
+                    daemon=False,
+                )
+                cls._ftp_thread.start()
+
+        cls._ftp_queue.put((
+            filename,
+            os.path.basename(filename),
+            ftp_user,
+            remote_dir,
+        ))
+
+    @classmethod
+    def wait_ftp_uploads(cls):
+        with cls._ftp_lock:
+            thread = cls._ftp_thread
+
+            if thread is None:
+                return
+
+            cls._ftp_queue.join()
+            cls._ftp_queue.put(None)
+
+        thread.join()
+
+        with cls._ftp_lock:
+            cls._ftp_thread = None
 
 
 class Map2km(BasePlot):
