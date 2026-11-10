@@ -36,27 +36,32 @@ class BasePlot:
         "icon2": "Kmq2026A!0",
         "icon6": "QzAXb@2026",
     }
+
+    SHAPE_PATH = (
+            Path(__file__).resolve().parent.parent
+            / "Adm_bound"
+            / "Administrative_boundaries.shp"
+    )
+
+    SHAPE_GEOMETRIES = tuple(Reader(str(SHAPE_PATH)).geometries())
+
     def __init__(self, path: str, date: str, ftp_user: str) -> None:
         self.path = path
         self.date = date
         self.ftp_user = ftp_user
 
     def create(self, text_left, text_right, description, fc_time, lead_time, resolution: float, right_pos=None):
-        self.fig, self.ax = plt.subplots(figsize=self.figsize, dpi=200)
-        self.fig.subplots_adjust(right=0.85)  # оставляем 15% справа для colorbar
-        self.ax.axis('off')
-        self.transform = crs.PlateCarree()
+        self.fig = plt.figure(figsize=self.figsize, dpi=200)
+        self.ax = self.fig.add_subplot(1, 1, 1, projection=self.proj)
+        self.fig.subplots_adjust(right=0.85)
 
-        self.ax = plt.axes(projection=self.proj)
+        # self.ax.axis('off')
+        self.transform = crs.PlateCarree()
         if resolution == 6.6:
             self.ax.set_extent(self.extent)
         self.ax.tick_params(right=False)
 
-        shp_path = Path(__file__).resolve().parent.parent/"Adm_bound"/"Administrative_boundaries.shp"
-
-        states = cf.ShapelyFeature(
-            Reader(str(shp_path)).geometries(),
-                                   self.transform, edgecolor='black', facecolor='none')
+        states = cf.ShapelyFeature(self.SHAPE_GEOMETRIES, self.transform, edgecolor='black', facecolor='none')
         self.ax.add_feature(states, linewidth=.5)
 
         for feature in [cf.RIVERS, cf.LAKES]:

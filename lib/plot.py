@@ -86,32 +86,32 @@ class PlotParameter:
 
         return score
 
-    def lpi_max24(self, hours_step=24) -> None:
+    def lpi_max24(self, hours_step=24, cut=None) -> None:
         description = f"Макс. молниевый потенциал ({hours_step} ч)"
 
         # title = f"{description}{self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Max молн за 24ч, Дж/м2"
         self._plot_max(name="lpi_max", data_step_minutes=10, cbar=cbar,
-                       bounds=lpi_bounds, description=description, cmap_list=lpi_cmap, hours_step=hours_step)
+                       bounds=lpi_bounds, description=description, cmap_list=lpi_cmap, hours_step=hours_step, cut=cut)
 
-    def sdi2_max24(self, hours_step=24) -> None:
+    def sdi2_max24(self, hours_step=24, cut=None) -> None:
         description = f"Индекс суперъячейки (SDI) ({hours_step} ч)"
 
         # title = f"{}{self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = "SDI_2 за 24 часа, 1/с"
         self._plot_max(name="sdi_2", data_step_minutes=60, cbar=cbar,
-                       bounds=sdi_bounds, description=description, threshold=sdi_threshold, cm="seismic", hours_step=hours_step)
+                       bounds=sdi_bounds, description=description, threshold=sdi_threshold, cm="seismic", hours_step=hours_step, cut=cut)
 
-    def hail_max(self, hours_step=24) -> None:
+    def hail_max(self, hours_step=24, cut=None) -> None:
         description = f"Макс. град ({hours_step} ч)"
 
         # title = f"{description}{self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = f"Max диам. града за {hours_step} час(а), мм"
         self._plot_max(name="dhail_avg", data_step_minutes=5, cbar=cbar,
-                       bounds=hail_bounds, description=description, cmap_list=hail_cmap, hours_step=hours_step)
+                       bounds=hail_bounds, description=description, cmap_list=hail_cmap, hours_step=hours_step, cut=cut)
 
     def gust_max(self, hours_step: int=24, cut=None) -> None:
         description = f"Максимальные порывы ветра ({hours_step} ч)"
@@ -126,7 +126,7 @@ class PlotParameter:
         self._plot_max(name="vmax_10m", data_step_minutes=step, cbar=cbar,
                        bounds=gust_bounds, description=description, cmap_list=gust_cmap, hours_step=hours_step, cut=cut)
 
-    def stp_max24(self, hours_step=24) -> None:
+    def stp_max24(self, hours_step=24, cut=None) -> None:
         description = "Макс. STP"
 
         # title = f"{description}{self.title}"
@@ -137,7 +137,7 @@ class PlotParameter:
             step = 60
         cbar["label"] = "Макс. STP за 24 часа, 1"
         self._plot_max(name="stp", data_step_minutes=step, cbar=cbar,
-                       bounds=stp_levels, description=description, cmap_list=gust_cmap[1:], extend='max', hours_step=hours_step)
+                       bounds=stp_levels, description=description, cmap_list=gust_cmap[1:], extend='max', hours_step=hours_step, cut=cut)
 
     def precip_sum(self, hours_step: int = 24, cut=None) -> None:
         description = f"Осадки за предыдущие {hours_step} ч"
@@ -231,7 +231,7 @@ class PlotParameter:
                 elif lead_time_hours != end_hours[j]:
                     da = xr.concat([da, parameter], "time")
 
-    def stp(self, fc_time, lead_time) -> None:
+    def stp(self, fc_time, lead_time, cut=None) -> None:
         description = "Индекс суперъячейки (SDI), параметр значимых торнадо (STP)"
 
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
@@ -251,7 +251,7 @@ class PlotParameter:
             self.plot_map.draw_colorbar(stp, cbar, stp_levels)
         self.plot_map.save(f"{self.model.name}_{self.resolution}_stp_{lead_time}")
 
-    def scp(self, fc_time, lead_time) -> None:
+    def scp(self, fc_time, lead_time, cut=None) -> None:
         description = "SuperCell Composite Parameter"
 
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
@@ -362,7 +362,7 @@ class PlotParameter:
         else:
             self.plot_map.save(f"{self.model.name}_{self.resolution}_wind_gust_{lead_time}")
 
-    def lpi(self, fc_time, lead_time) -> None:
+    def lpi(self, fc_time, lead_time, cut=None) -> None:
         description = "Макс. молниевый потенциал"
 
         # title = f"{fc_time}, {description}{self.title} +{lead_time}"
@@ -372,7 +372,10 @@ class PlotParameter:
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Max молн, Дж/м2 (за 1 час)"
         self.plot_map.draw_colorbar(lpi, cbar, lpi_bounds)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_lpi_max_{lead_time}")
+        if cut:
+            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_lpi_max_{lead_time}")
+        else:
+            self.plot_map.save(f"{self.model.name}_{self.resolution}_lpi_max_{lead_time}")
 
     def t2m(self, fc_time, lead_time, cut=None) -> None:
         description = "Температура воздуха (2 м)"
@@ -432,7 +435,8 @@ class PlotParameter:
         cbar["label"] = f"Температура на уровне {level} гПа,°C"
         self.plot_map.draw_colorbar(ct, cbar, levels_t)
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
-        self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.03), fontsize=9,
+        h = 1.03 if cut else 1.05
+        self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, h), fontsize=9,
                                 frameon=True)
         if cut:
             self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_t{level}_{lead_time}")
