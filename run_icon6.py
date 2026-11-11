@@ -6,7 +6,7 @@ from pathlib import Path
 from helpers import set_paths, initial_time
 from lib.cosmo import ComputedModelData, select_path, model_fileset
 from lib.plot import PlotParameter
-from lib.map import Map6kmKz
+from lib.map import Map6kmKz, BasePlot
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from constants import *
 
@@ -29,9 +29,7 @@ parameters_agg = ("gust_max", "precip_sum", "h_snow_sum", )
 
 def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minutes):
     model = ComputedModelData(NAME)
-
     model_time = initial_time(model.time.values)
-
     plot = PlotParameter(model, resolution, data_step_minutes, aggregation_hours, model_time)
 
     for lead_time_min in model_fileset(fc_start_minutes, fc_end_minutes, data_step_minutes):
@@ -66,11 +64,12 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
             for key in type_cloud[str(resolution)]:
                 plot.def_map(Map6kmKz(IMAGE_DIR, date, "icon6"))
                 futures.append(executor.submit(plot.cl_type, fc_time, lead_time, key))
+
             for future in as_completed(futures):
-                future.result()
+                add_to_ftp_queue(future.result())
 
         plot.def_map(Map6kmKz(IMAGE_DIR, date, "icon6"))
-        plot.phase(fc_time, lead_time)
+        add_to_ftp_queue(plot.phase(fc_time, lead_time))
 
     with ProcessPoolExecutor(len(parameters_agg) * 2) as executor:
         futures = []
@@ -80,7 +79,16 @@ def do_plot(aggregation_hours, fc_start_minutes, fc_end_minutes, data_step_minut
             futures.append(executor.submit(getattr(plot, parameter)))
             futures.append(executor.submit(getattr(plot, parameter), hours_step=12))
         for future in as_completed(futures):
-            future.result()
+            add_to_ftp_queue(future.result())
+
+
+def add_to_ftp_queue(result):
+    if not result or os.environ.get("HOSTNAME") != "xfront2":
+        return
+    filenames = result if isinstance(result, (list, tuple)) else [result]
+    for filename in filenames:
+        if filename:
+            BasePlot.queue_ftp_upload(filename, "icon6", f"/home/icon6/{date}")
 
 
 def main():
@@ -101,6 +109,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-
-
+    try:
+        main()
+    finally:
+        BasePlot.wait_ftp_uploads()

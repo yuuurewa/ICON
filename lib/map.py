@@ -186,32 +186,32 @@ class BasePlot:
             self.ax.scatter(lons, lats, s=size * 1000, c="white", marker='o',
                         linewidths=1, edgecolors="black", transform=self.transform)
 
-    def _chdir(self, ftp, dir):
-        if self._directory_exists(ftp, dir) is False:
-            ftp.mkd(dir)
-        ftp.cwd(dir)
+    # def _chdir(self, ftp, dir):
+    #     if self._directory_exists(ftp, dir) is False:
+    #         ftp.mkd(dir)
+    #     ftp.cwd(dir)
+    #
+    # def _directory_exists(self, ftp, dir):
+    #     filelist = []
+    #     ftp.retrlines('LIST', filelist.append)
+    #     for f in filelist:
+    #         if f.split()[-1] == dir and f.upper().startswith('D'):
+    #             return True
+    #     return False
 
-    def _directory_exists(self, ftp, dir):
-        filelist = []
-        ftp.retrlines('LIST', filelist.append)
-        for f in filelist:
-            if f.split()[-1] == dir and f.upper().startswith('D'):
-                return True
-        return False
-
-    def _ftp_send(self, filename, name):
-        p = {
-            "cosmo_phenom": "atyjvtys",
-            "cosmo_lhn": "gjh5GHF54f",
-            "icon2": "Kmq2026A!0",
-            "icon6": "QzAXb@2026",
-        }
-        session = ftplib.FTP('192.168.9.9', self.ftp_user, p[self.ftp_user])
-        file = open(filename, 'rb')
-        self._chdir(session, self.date)
-        session.storbinary(f'STOR {name}', file)  # send the file
-        file.close()
-        session.quit()
+    # def _ftp_send(self, filename, name):
+    #     p = {
+    #         "cosmo_phenom": "atyjvtys",
+    #         "cosmo_lhn": "gjh5GHF54f",
+    #         "icon2": "Kmq2026A!0",
+    #         "icon6": "QzAXb@2026",
+    #     }
+    #     session = ftplib.FTP('192.168.9.9', self.ftp_user, p[self.ftp_user])
+    #     file = open(filename, 'rb')
+    #     self._chdir(session, self.date)
+    #     session.storbinary(f'STOR {name}', file)  # send the file
+    #     file.close()
+    #     session.quit()
 
     def save(self, name, type=None, image_type=None, upload_ftp=True):
         if type == 'm':
@@ -243,13 +243,12 @@ class BasePlot:
         # plt.clf()
         plt.close()
 
-
-        if upload_ftp and os.environ.get('HOSTNAME') == "xfront2":
-            try:
-                self._ftp_send(filename, name)
-            except Exception as e:
-                print("FTP transfer failed")
-                print(e)
+        # if os.environ.get('HOSTNAME') == "xfront2":
+        #     self.queue_ftp_upload(
+        #         filename,
+        #         self.ftp_user,
+        #         f"/home/{self.ftp_user}/{self.date}"
+        #     )
 
         return filename
 

@@ -92,7 +92,7 @@ class PlotParameter:
         # title = f"{description}{self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Max молн за 24ч, Дж/м2"
-        self._plot_max(name="lpi_max", data_step_minutes=10, cbar=cbar,
+        return self._plot_max(name="lpi_max", data_step_minutes=10, cbar=cbar,
                        bounds=lpi_bounds, description=description, cmap_list=lpi_cmap, hours_step=hours_step, cut=cut)
 
     def sdi2_max24(self, hours_step=24, cut=None) -> None:
@@ -101,7 +101,7 @@ class PlotParameter:
         # title = f"{}{self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = "SDI_2 за 24 часа, 1/с"
-        self._plot_max(name="sdi_2", data_step_minutes=60, cbar=cbar,
+        return self._plot_max(name="sdi_2", data_step_minutes=60, cbar=cbar,
                        bounds=sdi_bounds, description=description, threshold=sdi_threshold, cm="seismic", hours_step=hours_step, cut=cut)
 
     def hail_max(self, hours_step=24, cut=None) -> None:
@@ -110,7 +110,7 @@ class PlotParameter:
         # title = f"{description}{self.title}"
         cbar = cbar_full[self.resolution]
         cbar["label"] = f"Max диам. града за {hours_step} час(а), мм"
-        self._plot_max(name="dhail_avg", data_step_minutes=5, cbar=cbar,
+        return self._plot_max(name="dhail_avg", data_step_minutes=5, cbar=cbar,
                        bounds=hail_bounds, description=description, cmap_list=hail_cmap, hours_step=hours_step, cut=cut)
 
     def gust_max(self, hours_step: int=24, cut=None) -> None:
@@ -123,7 +123,7 @@ class PlotParameter:
         else:
             step = 60
         cbar["label"] = f"Макс. порывы ветра за {hours_step} ч., м/с"
-        self._plot_max(name="vmax_10m", data_step_minutes=step, cbar=cbar,
+        return self._plot_max(name="vmax_10m", data_step_minutes=step, cbar=cbar,
                        bounds=gust_bounds, description=description, cmap_list=gust_cmap, hours_step=hours_step, cut=cut)
 
     def stp_max24(self, hours_step=24, cut=None) -> None:
@@ -136,7 +136,7 @@ class PlotParameter:
         else:
             step = 60
         cbar["label"] = "Макс. STP за 24 часа, 1"
-        self._plot_max(name="stp", data_step_minutes=step, cbar=cbar,
+        return self._plot_max(name="stp", data_step_minutes=step, cbar=cbar,
                        bounds=stp_levels, description=description, cmap_list=gust_cmap[1:], extend='max', hours_step=hours_step, cut=cut)
 
     def precip_sum(self, hours_step: int = 24, cut=None) -> None:
@@ -152,6 +152,7 @@ class PlotParameter:
         end_hours = hours[1:]
         bounds = [int(v * 3) if v > 1 else v for v in prec_bounds]
         tot_prec_previous = np.zeros(self.lats.shape)
+        filenames = []
         for end_hour in end_hours:
             for _ in model_fileset(start_hour * 60, end_hour * 60, hours_step * 60):
                 tot_prec_previous = gaussian_filter(self.model.tot_prec.values, 1)
@@ -170,15 +171,16 @@ class PlotParameter:
                 self.plot_map.draw_colorbar(c, cbar, bounds)
                 if hours_step == 24:
                     if cut:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_prec_{end_hour+1:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_prec_{end_hour+1:03d}"))
                     else:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_prec_{end_hour+1:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_prec_{end_hour+1:03d}"))
                 else:
                     if cut:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_prec_{end_hour:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_prec_{end_hour:03d}"))
                     else:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_prec_{end_hour:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_prec_{end_hour:03d}"))
                 start_hour = end_hour
+        return filenames
 
     def _plot_max(self, *, name: str, data_step_minutes: int, cbar: dict, bounds: tuple, description: str,
                   threshold: float = None, hours_step: int = 24, cut, **kwargs) -> None:
@@ -189,6 +191,7 @@ class PlotParameter:
             hours = self.half_aggregation_hours
         start_hours = hours[:-1]
         end_hours = hours[1:]
+        filenames = []
         for j, start_hour in enumerate(start_hours):
             for i, lead_time_minutes in enumerate(
                     model_fileset(start_hour * 60, end_hours[j] * 60 + 1, data_step_minutes)):
@@ -215,14 +218,14 @@ class PlotParameter:
                     self.plot_map.draw_colorbar(c, cbar, bounds)
                     if hours_step == 24:
                         if cut:
-                            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_MAX_{name}_{int(lead_time_hours)+1:03d}")
+                            filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_MAX_{name}_{int(lead_time_hours)+1:03d}"))
                         else:
-                            self.plot_map.save(f"{self.model.name}_{self.resolution}_MAX_{name}_{int(lead_time_hours)+1:03d}")
+                            filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_MAX_{name}_{int(lead_time_hours)+1:03d}"))
                     else:
                         if cut:
-                            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_MAX_{name}_{int(lead_time_hours):03d}")
+                            filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_MAX_{name}_{int(lead_time_hours):03d}"))
                         else:
-                            self.plot_map.save(f"{self.model.name}_{self.resolution}_MAX_{name}_{int(lead_time_hours):03d}")
+                            filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_MAX_{name}_{int(lead_time_hours):03d}"))
                     da = xr.DataArray()
 
                 if lead_time_hours == start_hours[j]:
@@ -230,6 +233,7 @@ class PlotParameter:
 
                 elif lead_time_hours != end_hours[j]:
                     da = xr.concat([da, parameter], "time")
+        return filenames
 
     def stp(self, fc_time, lead_time, cut=None) -> None:
         description = "Индекс суперъячейки (SDI), параметр значимых торнадо (STP)"
@@ -249,7 +253,7 @@ class PlotParameter:
 
         if len(stp.levels) > 1:
             self.plot_map.draw_colorbar(stp, cbar, stp_levels)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_stp_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_stp_{lead_time}")
 
     def scp(self, fc_time, lead_time, cut=None) -> None:
         description = "SuperCell Composite Parameter"
@@ -260,7 +264,7 @@ class PlotParameter:
         cbar = cbar_full[self.resolution]
         cbar["label"] = "SCP, 1"
         self.plot_map.draw_colorbar(scp, cbar, scp_levels)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_scp_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_scp_{lead_time}")
 
     def precipitation(self, fc_time, lead_time, cut=None) -> None:
         scale = self.data_step_min / 60
@@ -312,9 +316,9 @@ class PlotParameter:
             cbar["label"] = "Облачность ср. яруса, балл"
             self.plot_map.draw_colorbar(clcm, cbar, cl_lvl)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_tot_prec_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_tot_prec_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_tot_prec_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_tot_prec_{lead_time}")
 
     def dbz(self, fc_time, lead_time, cut=None) -> None:
         description = "Макс. радиолокационная отражаемость"
@@ -333,9 +337,9 @@ class PlotParameter:
             cbar["label"] = "Max отражаемость, dbZ (за 3 часа)"
         self.plot_map.draw_colorbar(dbz, cbar, dbz_bounds)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_dbz_ctmax_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_dbz_ctmax_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_dbz_ctmax_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_dbz_ctmax_{lead_time}")
 
     def wind_gust(self, fc_time, lead_time, cut=None) -> None:
         description = "Ветер и порывы ветра, давление на уровне моря"
@@ -358,9 +362,9 @@ class PlotParameter:
         cbar["label"] = "Порыв ветра, м/с"
         self.plot_map.draw_colorbar(vmax, cbar, gust_bounds)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_wind_gust_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_wind_gust_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_wind_gust_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_wind_gust_{lead_time}")
 
     def lpi(self, fc_time, lead_time, cut=None) -> None:
         description = "Макс. молниевый потенциал"
@@ -373,9 +377,9 @@ class PlotParameter:
         cbar["label"] = "Max молн, Дж/м2 (за 1 час)"
         self.plot_map.draw_colorbar(lpi, cbar, lpi_bounds)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_lpi_max_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_lpi_max_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_lpi_max_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_lpi_max_{lead_time}")
 
     def t2m(self, fc_time, lead_time, cut=None) -> None:
         description = "Температура воздуха (2 м)"
@@ -394,9 +398,9 @@ class PlotParameter:
         cbar["label"] = "Температура воздуха 2м,°C"
         self.plot_map.draw_colorbar(t2m, cbar, t_levels[(season, self.resolution)])
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_t2m_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_t2m_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_t2m_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_t2m_{lead_time}")
 
     def rh2m(self, fc_time, lead_time) -> None:
         description = "Относительная влажность (2 м)"
@@ -411,7 +415,7 @@ class PlotParameter:
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Отн. влажность, %"
         self.plot_map.draw_colorbar(cr, cbar, levels_rh)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_rh2m_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_rh2m_{lead_time}")
 
     def t_level(self, fc_time, lead_time, level: int, cut=None) -> None:
         description = f"Температура на уровне {level} гПа"
@@ -439,9 +443,9 @@ class PlotParameter:
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, h), fontsize=9,
                                 frameon=True)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_t{level}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_t{level}_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_t{level}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_t{level}_{lead_time}")
 
     def rh_level(self, fc_time, lead_time, level: int) -> None:
         description = f"Относительная влажность на уровне {level} гПа"
@@ -460,7 +464,7 @@ class PlotParameter:
         self.plot_map.draw_colorbar(crh, cbar, levels_rh)
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.05), fontsize=9, frameon=True)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_relhum{level}_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_relhum{level}_{lead_time}")
 
     def wind_level(self, fc_time, lead_time, level: int, cut=None) -> None:
         description = f"Ветер на уровне {level} гПа"
@@ -494,9 +498,9 @@ class PlotParameter:
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.03), fontsize=9, frameon=True)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_wind{level}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_wind{level}_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_wind{level}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_wind{level}_{lead_time}")
 
     def wz_level(self, fc_time, lead_time, level: int):
         description = f"Вертикальная скорость на уровне {level} гПа"
@@ -522,7 +526,7 @@ class PlotParameter:
         self.plot_map.draw_colorbar(cw, cbar, wz_levels[self.resolution])
         handles = [plt.Line2D([0], [0], color='saddlebrown', lw=2, label='Геопотенциальная высота (дам)')]
         self.plot_map.ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(-0.008, 1.06), fontsize=9, frameon=True)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_wz{level}_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_wz{level}_{lead_time}")
 
     def vis(self, fc_time, lead_time) -> None:
         description = "Приземная видимость"
@@ -538,7 +542,7 @@ class PlotParameter:
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Видимость, м"
         self.plot_map.draw_colorbar(cv, cbar, levels_vis)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_vis_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_vis_{lead_time}")
 
     def cloud(self, fc_time, lead_time, level: str, cut=None) -> None:
         if level=='clcl' or level=='clcm' or level=='clch':
@@ -559,9 +563,9 @@ class PlotParameter:
         cbar["label"] = "Облачность, балл"
         self.plot_map.draw_colorbar(cv, cbar, cl_lvl)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_{level}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_{level}_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{level}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{level}_{lead_time}")
 
     def cl_type(self, fc_time, lead_time, type: str, cut=None) -> None:
         if type=='hbas_con':
@@ -600,9 +604,9 @@ class PlotParameter:
         else:
             self.plot_map.draw_colorbar(cc, cbar, levels_cl_cov)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_{type}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_{type}_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{type}_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{type}_{lead_time}")
 
     def dp2m(self, fc_time, lead_time) -> None:
         description = "Дефицит точки росы (2 м)"
@@ -622,7 +626,7 @@ class PlotParameter:
         cbar = cbar_full[self.resolution]
         cbar["label"] = "Дефицит точки росы"
         self.plot_map.draw_colorbar(cd, cbar, levels_d)
-        self.plot_map.save(f"{self.model.name}_{self.resolution}_dew_point_{lead_time}")
+        return self.plot_map.save(f"{self.model.name}_{self.resolution}_dew_point_{lead_time}")
 
     def phase(self, fc_time, lead_time, cut=None) -> None:
         scale = self.data_step_min / 60
@@ -712,9 +716,9 @@ class PlotParameter:
 
             self.plot_map.draw_colorbar(c=cfs[key], cbar=cbar_cfg, levels=phase_levels)
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_phase_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_phase_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_phase_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_phase_{lead_time}")
 
     def h_snow_sum(self, hours_step: int = 24, cut=None) -> None:
         description = f"Прирост снежного покрова за предыдущие {hours_step} ч"
@@ -728,6 +732,7 @@ class PlotParameter:
         start_hour = hours[0]
         end_hours = hours[1:]
         tot_snow_previous = np.zeros(self.lats.shape)
+        filenames = []
         for end_hour in end_hours:
             for _ in model_fileset(start_hour * 60, end_hour * 60, hours_step * 60):
                 tot_snow_previous = gaussian_filter(self.model.h_snow.values*100, 1)
@@ -754,15 +759,16 @@ class PlotParameter:
                         else f"{value:.0f}"))
                 if hours_step == 24:
                     if cut:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_snow_{end_hour + 1:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_snow_{end_hour + 1:03d}"))
                     else:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_snow_{end_hour + 1:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_snow_{end_hour + 1:03d}"))
                 else:
                     if cut:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_snow_{end_hour:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_SUM_tot_snow_{end_hour:03d}"))
                     else:
-                        self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_snow_{end_hour:03d}")
+                        filenames.append(self.plot_map.save(f"{self.model.name}_{self.resolution}_SUM_tot_snow_{end_hour:03d}"))
                 start_hour = end_hour
+        return filenames
 
     def h_snow_it(self, fc_time, lead_time, cut=None) -> None:
         description = "Снежный покров"
@@ -780,6 +786,6 @@ class PlotParameter:
                                         shading="auto", transform=ccrs.PlateCarree())
         self.plot_map.draw_colorbar(c, cbar, h_snow_bounds, extend="both")
         if cut:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_h_snow_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_{cut}_h_snow_{lead_time}")
         else:
-            self.plot_map.save(f"{self.model.name}_{self.resolution}_h_snow_{lead_time}")
+            return self.plot_map.save(f"{self.model.name}_{self.resolution}_h_snow_{lead_time}")
