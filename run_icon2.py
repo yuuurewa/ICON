@@ -92,7 +92,7 @@ def add_to_ftp_queue(result):
     filenames = result if isinstance(result, (list, tuple)) else [result]
     for filename in filenames:
         if filename:
-            BasePlot.queue_ftp_upload(filename, "icon6", f"/home/icon2/{date}")
+            BasePlot.queue_ftp_upload(filename, "icon2", f"/home/icon2/{date}")
 
 
 def main():
